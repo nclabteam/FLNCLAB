@@ -98,23 +98,38 @@ def gen_out_file_client(config):
     data_dist_type = config['data_type']
     BASE_DIR = "out"
     if not os.path.exists(BASE_DIR):
-        os.mkdir(BASE_DIR)
+        try:
+            os.mkdir(BASE_DIR)
+        except FileExistsError:
+            pass
     # create a date wise folder
     if not os.path.exists(os.path.join(BASE_DIR, str(today))):
-        os.mkdir(os.path.join(BASE_DIR, str(today)))
+        try:
+            os.mkdir(os.path.join(BASE_DIR, str(today)))
+        except FileExistsError:
+            pass
 
     # create saperate folder based on hpo mode
     if not os.path.exists(os.path.join(BASE_DIR, str(today), mode)):
-        os.mkdir(os.path.join(BASE_DIR, str(today), mode))
+        try:
+            os.mkdir(os.path.join(BASE_DIR, str(today), mode))
+        except FileExistsError:
+            pass
 
     # create saperate folder based on strategy
     if not os.path.exists(os.path.join(BASE_DIR, str(today), mode, config['strategy'])):
-        os.mkdir(os.path.join(BASE_DIR, str(today), mode, config['strategy']))
+        try:
+            os.mkdir(os.path.join(BASE_DIR, str(today), mode, config['strategy']))
+        except FileExistsError:
+            pass
 
     # create saperate folder based on data distribution type
     if not os.path.exists(os.path.join(BASE_DIR, str(today), mode, config['strategy'], data_dist_type)):
-        os.mkdir(os.path.join(BASE_DIR, str(today),
+        try:
+            os.mkdir(os.path.join(BASE_DIR, str(today),
                  mode, config['strategy'], data_dist_type))
+        except FileExistsError:
+            pass
 
     dirs = os.listdir(os.path.join(BASE_DIR, str(today),
                       mode, config['strategy'], data_dist_type))
@@ -127,7 +142,10 @@ def gen_out_file_client(config):
         today), mode, config['strategy'], data_dist_type, str(last_updated_dir))
 
     if not os.path.exists(final_dir_path):
-        os.mkdir(final_dir_path)
+        try:
+            os.mkdir(final_dir_path)
+        except FileExistsError:
+            pass
 
     now = datetime.now()
     current_time = now.strftime("%H-%M-%S")
