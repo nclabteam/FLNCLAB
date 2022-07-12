@@ -45,6 +45,35 @@ class SimpleCNN(Model):
             tf.keras.layers.Dense(self.num_classes, activation='softmax'),
         ])
 
+class KerasExpCNN(Model):
+    def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
+        super().__init__(input_shape, num_classes, weights)
+
+        self._model = tf.keras.models.Sequential([
+        tf.keras.Input(shape=self.input_shape),
+        tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+        tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dropout(0.4),
+        tf.keras.layers.Dense(self.num_classes, activation="softmax"),
+    ])
+        
+
+
+# class SimpleDNN(Model):
+#     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
+#         super().__init__(input_shape, num_classes, weights)
+
+#         self._model = tf.keras.Sequential([
+#             tf.keras.layers.Flatten(input_shape=input_shape),
+#             tf.keras.layers.Dense(512, activation='relu'),
+#             tf.keras.layers.Dense(256, activation='relu'),
+#             tf.keras.layers.Dense(128, activation='relu'),
+#             tf.keras.layers.Dense(64, activation='relu'),
+#             tf.keras.layers.Dense(self.num_classes, activation='softmax')
+#         ])
 
 class SimpleDNN(Model):
     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
@@ -52,11 +81,9 @@ class SimpleDNN(Model):
 
         self._model = tf.keras.Sequential([
             tf.keras.layers.Flatten(input_shape=input_shape),
-            tf.keras.layers.Dense(512, activation='relu'),
             tf.keras.layers.Dense(256, activation='relu'),
             tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(64, activation='relu'),
-            tf.keras.layers.Dense(10, activation='softmax')
+            tf.keras.layers.Dense(self.num_classes, activation='softmax')
         ])
 
 

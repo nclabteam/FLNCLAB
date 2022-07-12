@@ -2,16 +2,16 @@
 # config
 
 common:
-  data_type : one-class-niid   #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
+  data_type : one-class-niid-majority  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
   hpo : true  #hpo = Hyperparameter optimisation true or false
-  target_acc : 0.80
+  target_acc : 0.85
 
 server:
   max_rounds : 1100
   address : 203.255.77.220
-  min_fit_clients: 3
-  min_avalaible_clients : 3
-  strategy : fedavg  #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm']
+  min_fit_clients: 10
+  min_avalaible_clients : 20
+  strategy : fedyogi  #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm']
 
 client:
   epochs : 11

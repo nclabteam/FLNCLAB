@@ -1,7 +1,7 @@
 from mak.utils import generate_config_client, gen_out_file_client
 from mak.custom_clients.fashion_mnist_client import FashionMnistClient
 from mak.data.fashion_mnist import FashionMnistData
-from mak.model.models import SimpleDNN
+from mak.model.models import SimpleCNN, SimpleDNN, KerasExpCNN
 import os
 import argparse
 import string
@@ -27,7 +27,7 @@ def main() -> None:
     client_config = generate_config_client(args)
     data_type = client_config['data_type']
     out_file_dir = gen_out_file_client(client_config)
-    model = SimpleDNN(input_shape=input_shape, num_classes=10)._model
+    model = KerasExpCNN(input_shape=input_shape, num_classes=10)._model
     fashion_mnist_data_obj = FashionMnistData(10, data_type)
     # Compile model
     model.compile(

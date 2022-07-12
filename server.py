@@ -2,8 +2,9 @@ import argparse
 import os
 import csv
 from datetime import date, datetime
+from tabnanny import verbose
 from mak.custom_strategy.custom_fedavg import CustomFedAvg
-from mak.model.models import SimpleDNN
+from mak.model.models import SimpleCNN, SimpleDNN, KerasExpCNN
 from mak.custom_server import ServerSaveData
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import tensorflow as tf
@@ -26,7 +27,7 @@ def get_eval_fn(model):
         weights: fl.common.Weights,
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
         model.set_weights(weights)  # Update model with the latest parameters
-        loss, accuracy = model.evaluate(x_val, y_val)
+        loss, accuracy = model.evaluate(x_val, y_val,verbose=1)
         model.save('./saved_model')
         print("Accuracy {} ".format(accuracy))
         return loss, {"accuracy": accuracy}
@@ -42,7 +43,7 @@ def main() -> None:
     server_config = generate_config_server(args)
     out_file_path = gen_dir_outfile_server(config=server_config)
 
-    model = SimpleDNN(input_shape=input_shape, num_classes=10)._model
+    model = KerasExpCNN(input_shape=input_shape, num_classes=10)._model
     # Compile model
     model.compile(
         optimizer=tf.keras.optimizers.Adam(),
