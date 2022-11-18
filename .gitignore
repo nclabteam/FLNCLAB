@@ -5,3 +5,4 @@ venv-flwr/
 plot_style.txt
 .ipynb_checkpoints
 *__pycache__
+run_clients.sh
