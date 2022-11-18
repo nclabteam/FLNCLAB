@@ -10,7 +10,7 @@
 
 1. Clone this repository using command
 ```bash
-~$ git clone https://github.com/kundroomajid/flwr_v3.git
+~$ git clone https://github.com/kundroomajid/fedhpo_framework.git
 ```
 2. After clone cd into cloned directory and open terminal.
 
