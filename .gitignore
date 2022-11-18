@@ -1,3 +1,7 @@
 out/
 saved_model/
 venv-flwr/
+*.ipynb
+plot_style.txt
+.ipynb_checkpoints
+*__pycache__

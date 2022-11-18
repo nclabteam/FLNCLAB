@@ -61,6 +61,18 @@ class KerasExpCNN(Model):
     ])
         
 
+class MNISTCNN(Model):
+    def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
+        super().__init__(input_shape, num_classes, weights)
+
+        self._model = tf.keras.models.Sequential([
+        tf.keras.Input(shape=self.input_shape),
+        tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu"),
+        tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(28,activation='relu'),
+        tf.keras.layers.Dense(self.num_classes, activation="softmax"),
+    ])
 
 # class SimpleDNN(Model):
 #     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):

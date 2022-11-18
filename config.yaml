@@ -2,21 +2,22 @@
 # config
 
 common:
-  data_type : one-class-niid-majority  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
-  hpo : true  #hpo = Hyperparameter optimisation true or false
-  target_acc : 0.85
+  data_type : iid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
+  hpo : false #hpo = Hyperparameter optimisation true or false
+  dataset : fashionmnist #data_set = data set used  one among [fashionmnist,mnist,]
+  target_acc : 0.91
 
 server:
-  max_rounds : 1100
+  max_rounds : 111
   address : 203.255.77.220
   min_fit_clients: 10
   min_avalaible_clients : 20
-  strategy : fedyogi  #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm']
+  strategy : fedavg #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm']
 
 client:
   epochs : 11
   batch_size : 32
-
+  lr: 0.0001  #[0.0001,0.001,0.005,0.01,0.1,0.2]
 
 
 

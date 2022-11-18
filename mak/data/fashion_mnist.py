@@ -52,7 +52,7 @@ class FashionMnistData(Dataset):
         # divides dataset into equall sized partitions based on number of clients
         # this method takes partition id as argument
         num_samples_train = int(len(self.x_train) / self.num_clients)
-        num_samples_valid = int(len(self.x_train) / self.num_clients)
+        num_samples_valid = int(len(self.x_test) / self.num_clients)
 
          # Convert class vectors to one-hot encoded labels
         y_train = tf.keras.utils.to_categorical(self.y_train, 10)

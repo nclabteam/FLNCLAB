@@ -59,13 +59,14 @@ class FashionMnistClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
-        r = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, validation_data=(self.x_test, self.y_test), verbose=1,callbacks=self.callbacks)
+        r = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, validation_split=0.15, verbose=1,callbacks=self.callbacks)
         hist = r.history
         return self.model.get_weights(), len(self.x_train), {}
 
     def evaluate(self, parameters, config):
         self.model.set_weights(parameters)
+        print("Inside evalvate FashionMNistClient")
         loss, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=1)
-        print("Eval accuracy : ", accuracy)
+        print("Eval accuracy on Client {} : {}".format(self.client_name,accuracy))
         return loss, len(self.x_test), {"accuracy": accuracy}
             
