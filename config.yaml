@@ -2,9 +2,9 @@
 # config
 
 common:
-  data_type : iid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
-  hpo : true #hpo = Hyperparameter optimisation true or false
-  dataset : fashionmnist #data_set = data set used  one among [fashionmnist,mnist,]
+  data_type : two-class-niid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
+  hpo : false #hpo = Hyperparameter optimisation true or false
+  dataset : mnist #data_set = data set used  one among [fashionmnist,mnist,]
   target_acc : 0.91
 
 server:
