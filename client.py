@@ -16,7 +16,7 @@ from mak.utils import set_seed
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
-np.random.seed(0)
+# np.random.seed(0)
 input_shape = (28, 28, 1)
 
 
@@ -40,7 +40,7 @@ def main() -> None:
         data = FashionMnistData(10, data_type)
     # Compile model
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
+        optimizer=tf.keras.optimizers.Adam(),
         loss=tf.keras.losses.categorical_crossentropy,
         metrics=["accuracy"],
         run_eagerly=True,
