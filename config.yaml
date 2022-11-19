@@ -9,13 +9,13 @@ common:
 
 server:
   max_rounds : 1100
-  address : 203.255.77.220
+  address : 203.255.93.30
   min_fit_clients: 10
   min_avalaible_clients : 20
   strategy : fedavg #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm']
 
 client:
-  epochs : 21
+  epochs : 33
   batch_size : 32
   lr: 0.001  #[0.0001,0.001,0.005,0.01,0.1,0.2]
 
