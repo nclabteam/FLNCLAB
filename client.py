@@ -40,7 +40,7 @@ def main() -> None:
         data = FashionMnistData(10, data_type)
     # Compile model
     model.compile(
-        optimizer=tf.keras.optimizers.SGD(),
+        optimizer=tf.keras.optimizers.Adam(),
         loss=tf.keras.losses.categorical_crossentropy,
         metrics=["accuracy"],
         run_eagerly=True,

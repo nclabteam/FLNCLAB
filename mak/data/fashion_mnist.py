@@ -26,8 +26,8 @@ class FashionMnistData(Dataset):
         (x_train, y_train), (x_test,
                              y_test) = tf.keras.datasets.fashion_mnist.load_data()
 
-        # x_train, y_train = shuffle(x_train, y_train)
-        # x_test, y_test = shuffle(x_test, y_test)
+        x_train, y_train = shuffle(x_train, y_train)
+        x_test, y_test = shuffle(x_test, y_test)
 
         self.all_labels = np.array(y_train)
 

@@ -2,9 +2,9 @@
 # config
 
 common:
-  data_type : two-class-niid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
+  data_type : iid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
   hpo : false #hpo = Hyperparameter optimisation true or false
-  dataset : mnist #data_set = data set used  one among [fashionmnist,mnist,]
+  dataset : fashionmnist #data_set = data set used  one among [fashionmnist,mnist,]
   target_acc : 0.91
 
 server:
@@ -15,7 +15,7 @@ server:
   strategy : fedavg #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm']
 
 client:
-  epochs : 33
+  epochs : 16
   batch_size : 32
   lr: 0.001  #[0.0001,0.001,0.005,0.01,0.1,0.2]
 
