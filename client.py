@@ -33,7 +33,7 @@ def main() -> None:
     data_type = client_config['data_type']
     lr = client_config['lr']
     out_file_dir = gen_out_file_client(client_config)
-    model = SimpleCNN(input_shape=input_shape, num_classes=10)._model
+    model = KerasExpCNN(input_shape=input_shape, num_classes=10)._model
     if client_config['dataset'] == 'mnist':
         data = MnistData(10, data_type)
     else:
