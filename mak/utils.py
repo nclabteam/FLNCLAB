@@ -6,6 +6,7 @@ import json
 import random
 import numpy as np
 import tensorflow as tf
+from mak.model.models import *
 
 def generate_config_server(args):
     yaml_file = args.config
@@ -20,6 +21,7 @@ def generate_config_server(args):
             server_config['strategy'] = config['server']['strategy']
             server_config['dataset']  = config['common']['dataset']
             server_config['epochs'] = config['client']['epochs']
+            server_config['model'] = config['common']['model']
             server_config['hpo'] = config['common']['hpo']
             server_config['data_type'] = config['common']['data_type']
             server_config['target_acc'] = config['common']['target_acc']
@@ -50,6 +52,7 @@ def generate_config_client(args):
             client_config['dataset'] = config['common']['dataset']
             client_config['lr'] = config['client']['lr']
             client_config['batch_size'] = config['client']['batch_size']
+            client_config['model'] = config['common']['model']
 
             return client_config
         except yaml.YAMLError as exc:
@@ -200,3 +203,22 @@ def set_seed(seed: int = 13) -> None:
   # Set a fixed value for the hash seed
   os.environ["PYTHONHASHSEED"] = str(seed)
   print(f"Random seed set as {seed}")
+
+
+def create_model(name,input_shape, num_classes=10):
+    # mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet
+    if name == 'mobilenetv2':
+        return MobileNetV2(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'simplecnn':
+        return SimpleCNN(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'simplednn':
+        return SimpleDNN(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'kerasexpcnn':
+        return KerasExpCNN(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'mnistcnn':
+        return MNISTCNN(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'efficientnet':
+        return EfficientNetB0(input_shape=input_shape,num_classes=num_classes)._model
+    else:
+        print("Invalid model name. Model name must be among [ mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet]")
+
