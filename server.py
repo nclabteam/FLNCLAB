@@ -13,7 +13,7 @@ from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
 import yaml
 from mak.utils import generate_config_server,gen_dir_outfile_server
-from mak.utils import set_seed
+from mak.utils import set_seed, create_model, compile_model
 
 def get_eval_fn(model,dataset):
     """Return an evaluation function for server-side evaluation."""
@@ -47,14 +47,9 @@ def main() -> None:
     server_config = generate_config_server(args)
     out_file_path = gen_dir_outfile_server(config=server_config)
     dataset = server_config['dataset']
-    model = KerasExpCNN(input_shape=input_shape, num_classes=10)._model
+    model = create_model(server_config['model'],input_shape=input_shape,num_classes=10)
     # Compile model
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
-        loss=tf.keras.losses.categorical_crossentropy,
-        metrics=["accuracy"],
-        run_eagerly=True,
-    )
+    model = compile_model(model,server_config['optimizer'],server_config['lr'])
 
     # Create strategy
     if server_config['strategy'] == "fedyogi":

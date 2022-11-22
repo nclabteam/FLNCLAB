@@ -28,6 +28,7 @@ def generate_config_server(args):
             server_config['dataset'] = config['common']['dataset']
             server_config['lr'] = config['client']['lr']
             server_config['batch_size'] = config['client']['batch_size']
+            server_config['optimizer'] = config['common']['optimizer']
 
             return server_config
         except yaml.YAMLError as exc:
@@ -53,6 +54,7 @@ def generate_config_client(args):
             client_config['lr'] = config['client']['lr']
             client_config['batch_size'] = config['client']['batch_size']
             client_config['model'] = config['common']['model']
+            client_config['optimizer'] = config['common']['optimizer']
 
             return client_config
         except yaml.YAMLError as exc:
@@ -222,3 +224,15 @@ def create_model(name,input_shape, num_classes=10):
     else:
         print("Invalid model name. Model name must be among [ mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet]")
 
+def compile_model(model,optimizer,lr= 0.001):
+    if optimizer == 'sgd':
+        opt = tf.keras.optimizers.SGD(learning_rate = lr)
+    else:
+        opt = tf.keras.optimizers.Adam(learning_rate = lr)
+    
+    return model.compile(
+        optimizer=opt,
+        loss=tf.keras.losses.categorical_crossentropy,
+        metrics=["accuracy"],
+        run_eagerly=True,
+    )

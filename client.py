@@ -11,7 +11,7 @@ import tensorflow as tf
 import numpy as np
 from flwr.common import weights_to_parameters
 from typing import Dict, Tuple, cast
-from mak.utils import set_seed, create_model
+from mak.utils import set_seed, create_model, compile_model
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -34,6 +34,7 @@ def main() -> None:
     lr = client_config['lr']
     out_file_dir = gen_out_file_client(client_config)
     model = create_model(client_config['model'],input_shape=input_shape,num_classes=10)
+    model = compile_model(model,client_config['optimizer'],lr=lr)
     if client_config['dataset'] == 'mnist':
         data = MnistData(10, data_type)
     else:
