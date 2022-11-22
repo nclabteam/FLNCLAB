@@ -3,11 +3,11 @@
 
 common:
   data_type : iid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid']
-  hpo : true #hpo = Hyperparameter optimisation true or false
+  hpo : false #hpo = Hyperparameter optimisation true or false
   dataset : fashionmnist #data_set = data set used  one among [fashionmnist,mnist,]
   target_acc : 0.91
   model : simplednn #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet]
-  optimizer : adam # one among [sgd,adam]
+  optimizer : sgd # one among [sgd,adam]
 
 server:
   max_rounds : 1100
