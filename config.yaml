@@ -6,6 +6,7 @@ common:
   hpo : true #hpo = Hyperparameter optimisation true or false
   dataset : fashionmnist #data_set = data set used  one among [fashionmnist,mnist,]
   target_acc : 0.91
+  model : simplednn #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet]
 
 server:
   max_rounds : 1100
