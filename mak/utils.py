@@ -230,7 +230,7 @@ def compile_model(model,optimizer,lr= 0.001):
     else:
         opt = tf.keras.optimizers.Adam(learning_rate = lr)
     
-    return model.compile(
+    model.compile(
         optimizer=opt,
         loss=tf.keras.losses.categorical_crossentropy,
         metrics=["accuracy"],

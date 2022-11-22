@@ -49,7 +49,7 @@ def main() -> None:
     dataset = server_config['dataset']
     model = create_model(server_config['model'],input_shape=input_shape,num_classes=10)
     # Compile model
-    model = compile_model(model,server_config['optimizer'],server_config['lr'])
+    compile_model(model,server_config['optimizer'],server_config['lr'])
 
     # Create strategy
     if server_config['strategy'] == "fedyogi":
