@@ -2,6 +2,7 @@ from mak.utils import generate_config_client, gen_out_file_client
 from mak.custom_clients.fashion_mnist_client import FashionMnistClient
 from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
+from mak.data.cifar_10_data import Cifar10Data
 from mak.model.models import SimpleCNN, SimpleDNN, KerasExpCNN
 import os
 import argparse
@@ -17,7 +18,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
 # np.random.seed(0)
-input_shape = (28, 28, 1)
 
 
 def main() -> None:
@@ -33,10 +33,16 @@ def main() -> None:
     data_type = client_config['data_type']
     lr = client_config['lr']
     out_file_dir = gen_out_file_client(client_config)
+    if client_config['dataset'] == 'cifar-10':
+        input_shape = (32, 32, 3)
+    else:
+        input_shape = (28, 28, 1)
     model = create_model(client_config['model'],input_shape=input_shape,num_classes=10)
     compile_model(model,client_config['optimizer'],lr=lr)
     if client_config['dataset'] == 'mnist':
         data = MnistData(10, data_type)
+    elif client_config['dataset'] == 'cifar-10':
+        data = Cifar10Data(10, data_type)
     else:
         data = FashionMnistData(10, data_type)
     # Compile model
@@ -49,7 +55,7 @@ def main() -> None:
 
     client_name = f"client_{client_config['client_id']}"
     print(f"Data Type : {client_config['data_type']}")
-    # Load a subset of fashion mnist to simulate the local data partition
+    # Load a subset of dataset to simulate the local data partition
     if data_type == "one-class-niid":
         print("Using One Class NoN-IID data")
         (x_train, y_train), (x_test, y_test) = data.load_data_one_class(
@@ -66,6 +72,12 @@ def main() -> None:
         print(f"Class 1 = {class_1}, Class 2 = {class_2}")
         (x_train, y_train), (x_test, y_test) = data.load_data_two_classes(
             class_1=class_1, class_2=class_2)
+    elif data_type == "dirichlet_niid":
+        alpha = client_config['dirichlet_alpha']
+        print("Using Dirichlet Distribution with alpha = {}".format(client_config['dirichlet_alpha']))
+        (x_train, y_train), (_, _) = data.load_data_niid_dirchlet(alpha=alpha,min_size=200,partition=client_config['client_id'])
+        
+        (x_test,y_test) = data.load_test_data()
     else:
         print("Using Default IID Settings")
         (x_train, y_train), (x_test, y_test) = data.load_data_iid(id=

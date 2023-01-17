@@ -11,6 +11,7 @@ import tensorflow as tf
 import flwr as fl
 from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
+from mak.data.cifar_10_data import Cifar10Data
 import yaml
 from mak.utils import generate_config_server,gen_dir_outfile_server
 from mak.utils import set_seed, create_model, compile_model
@@ -21,6 +22,8 @@ def get_eval_fn(model,dataset):
     # load last 5k samples for testing
     if dataset =='mnist':
         (x_val, y_val) = MnistData(num_clients=10).load_test_data()
+    elif dataset == 'cifar-10':
+        (x_val, y_val) = Cifar10Data(num_clients=10).load_test_data()
     else:
         (x_val, y_val) = FashionMnistData(num_clients=10).load_test_data()
     print("Validation x shape : {}".format(x_val.shape))
@@ -40,13 +43,18 @@ def get_eval_fn(model,dataset):
 
 def main() -> None:
     set_seed(13)
-    input_shape = (28, 28, 1)
     parser = argparse.ArgumentParser(description="Flower")
     parser.add_argument("--config",type=str,default = "config.yaml")
     args = parser.parse_args()
     server_config = generate_config_server(args)
     out_file_path = gen_dir_outfile_server(config=server_config)
     dataset = server_config['dataset']
+
+    if server_config['dataset'] == 'cifar-10':
+        input_shape = (32, 32, 3)
+    else:
+        input_shape = (28, 28, 1)
+
     model = create_model(server_config['model'],input_shape=input_shape,num_classes=10)
     # Compile model
     compile_model(model,server_config['optimizer'],server_config['lr'])

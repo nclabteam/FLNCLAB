@@ -6,7 +6,7 @@ import string
 SEED = 2000
 
 
-class FashionMnistData(Dataset):
+class Cifar10Data(Dataset):
     def __init__(self, num_clients: int, data_distribution: string = "iid"):
         super().__init__(num_clients, data_distribution)
         self.x_train, self.y_train, self.x_test, self.y_test = self._get_and_preprocess_data()
@@ -16,7 +16,7 @@ class FashionMnistData(Dataset):
         labels = np.argmax(tf.keras.utils.to_categorical(self.y_train, 10))
         all_classes = np.unique(self.all_labels)
         print(
-            f"Dataset : FashionMNIST => Num Classes : {len(all_classes)} Class Labels = {all_classes}")
+            f"Dataset : Cifar-10 Dataset => Num Classes : {len(all_classes)} Class Labels = {all_classes}")
         print(
             f"Data Stats => X Train Samples : {len(self.x_train)}  X Test Samples {len(self.x_test)}")
         print(
@@ -24,7 +24,7 @@ class FashionMnistData(Dataset):
 
     def _get_and_preprocess_data(self):
         (x_train, y_train), (x_test,
-                             y_test) = tf.keras.datasets.fashion_mnist.load_data()
+                             y_test) = tf.keras.datasets.cifar10.load_data()
 
         x_train, y_train = shuffle(x_train, y_train)
         x_test, y_test = shuffle(x_test, y_test)
@@ -32,8 +32,8 @@ class FashionMnistData(Dataset):
         self.all_labels = np.array(y_train)
 
         # Adjust x sets shape for model
-        x_train = self.adjust_x_shape(x_train)
-        x_test = self.adjust_x_shape(x_test)
+        # x_train = self.adjust_x_shape(x_train)
+        # x_test = self.adjust_x_shape(x_test)
         # Normalize data
         x_train = x_train.astype("float32") / 255.0
         x_test = x_test.astype("float32") / 255.0
@@ -220,6 +220,7 @@ class FashionMnistData(Dataset):
         dy_test = tf.keras.utils.to_categorical(dy_test, 10)
 
         return (np.array(dx_train), np.array(dy_train)), (np.array(dx_test), np.array(dy_test))
+
     def load_data_niid_dirchlet(self,alpha,min_size,partition):
         # partition is client id
         n_train = self.x_train.shape[0]
@@ -262,9 +263,13 @@ class FashionMnistData(Dataset):
         return (x_train, y_train), (self.x_test, self.y_test)
 
 
+
 def shuffle(x_orig: np.ndarray, y_orig: np.ndarray, seed: int = 2000) -> Tuple[np.ndarray, np.ndarray]:
     """Shuffle x and y in the same way."""
     np.random.seed(seed)
     idx = np.random.permutation(len(x_orig))
     # print(idx[:20])
     return x_orig[idx], y_orig[idx]
+
+
+  

@@ -48,6 +48,7 @@ def generate_config_client(args):
             client_config['hpo'] = config['common']['hpo']
             client_config['dataset'] = config['common']['dataset']
             client_config['data_type'] = config['common']['data_type']
+            client_config['dirichlet_alpha'] = config['common']['dirichlet_alpha']
             client_config['strategy'] = config['server']['strategy']
             client_config['server_address'] = config['server']['address']
             client_config['dataset'] = config['common']['dataset']
@@ -221,6 +222,10 @@ def create_model(name,input_shape, num_classes=10):
         return MNISTCNN(input_shape=input_shape,num_classes=num_classes)._model
     elif name == 'efficientnet':
         return EfficientNetB0(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'fedavgcnn':
+        return FedAVGCNN(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'fmcnn':
+        return FMCNNModel(input_shape=input_shape,num_classes=num_classes)._model
     else:
         print("Invalid model name. Model name must be among [ mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet]")
 

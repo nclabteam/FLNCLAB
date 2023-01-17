@@ -221,6 +221,47 @@ class MnistData(Dataset):
 
         return (np.array(dx_train), np.array(dy_train)), (np.array(dx_test), np.array(dy_test))
 
+    def load_data_niid_dirchlet(self,alpha,min_size,partition):
+        # partition is client id
+        n_train = self.x_train.shape[0]
+        max_size = len(self.x_train) / self.num_clients
+        current_min_size = 0
+        num_class = np.amax(self.y_train) + 1
+        data_size = self.y_train.shape[0]
+        net_dataidx_map = {} 
+        assert(partition in range(self.num_clients))
+
+        while current_min_size < min_size :
+            idx_batch = [[] for _ in range(self.num_clients)]
+            for k in range(num_class):
+                idx_k = np.where(self.y_train == k)[0]
+                np.random.shuffle(idx_k)
+                proportions = np.random.dirichlet(np.repeat(alpha, self.num_clients))
+                # using the proportions from dirichlet, only selet those clients having data amount less than average
+                proportions = np.array(
+                    [p * (len(idx_j) < data_size / self.num_clients) for p, idx_j in zip(proportions, idx_batch)])
+                # scale proportions
+                proportions = proportions / proportions.sum()
+                proportions = (np.cumsum(proportions) * len(idx_k)).astype(int)[:-1]
+                idx_batch = [idx_j + idx.tolist() for idx_j, idx in zip(idx_batch, np.split(idx_k, proportions))]
+                current_min_size = min([len(idx_j) for idx_j in idx_batch])
+        federated_data = {}
+        clients = []
+        for j in range(self.num_clients):
+            np.random.shuffle(idx_batch[j])
+            client_id =  j
+            clients.append(client_id)
+            temp = {}
+            temp['x'] = np.array(self.x_train[idx_batch[j]])
+            temp['y'] = np.array(self.y_train[idx_batch[j]])
+            federated_data[client_id] = temp
+            net_dataidx_map[client_id] = idx_batch[j]
+        x_train = federated_data[partition]['x']
+        y_train = federated_data[partition]['y']
+        y_train = tf.keras.utils.to_categorical(y_train, 10)
+        #returns train data in dirchlet distribution and not the validation data
+        return (x_train, y_train), (self.x_test, self.y_test)
+
 
 def shuffle(x_orig: np.ndarray, y_orig: np.ndarray, seed: int = 2000) -> Tuple[np.ndarray, np.ndarray]:
     """Shuffle x and y in the same way."""
