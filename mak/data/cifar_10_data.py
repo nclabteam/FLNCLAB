@@ -37,7 +37,6 @@ class Cifar10Data(Dataset):
         # Normalize data
         x_train = x_train.astype("float32") / 255.0
         x_test = x_test.astype("float32") / 255.0
-
         return x_train, y_train, x_test, y_test
 
     def adjust_x_shape(self, nda: np.ndarray) -> np.ndarray:

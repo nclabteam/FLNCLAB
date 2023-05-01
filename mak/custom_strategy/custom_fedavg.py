@@ -11,9 +11,6 @@ from flwr.common import (
     MetricsAggregationFn,
     Parameters,
     Scalar,
-    Weights,
-    parameters_to_weights,
-    weights_to_parameters,
 )
 
 class CustomFedAvg(fl.server.strategy.FedAvg):
