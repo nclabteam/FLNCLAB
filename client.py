@@ -1,37 +1,25 @@
-from mak.utils import generate_config_client, gen_out_file_client
-from mak.custom_clients.fashion_mnist_client import FashionMnistClient
+from mak.utils import generate_config_client, gen_out_file_client, generate_config_simulation
+from mak.custom_clients.flwr_client import FlwrClient
 from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
 from mak.data.cifar_10_data import Cifar10Data
 from mak.model.models import SimpleCNN, SimpleDNN, KerasExpCNN
 import os
-import argparse
-import string
 import flwr as fl
 import tensorflow as tf
 import numpy as np
-from flwr.common import weights_to_parameters
 from typing import Dict, Tuple, cast
 from mak.utils import set_seed, create_model, compile_model
+from mak.utils import parse_args
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
-# np.random.seed(0)
-
-
-def main() -> None:
-    set_seed(13)
-    # Parse command line argument `partition`
-    parser = argparse.ArgumentParser(description="Flower")
-    parser.add_argument("--partition", type=int,
-                        choices=range(0, 10), required=True)
-    parser.add_argument("--config", type=str, default="config.yaml")
-    parser.add_argument("--client_id", type=int, required=True)
-    args = parser.parse_args()
-    client_config = generate_config_client(args)
+def generate_client(cid : str) -> fl.client.Client:
+    client_config = generate_config_simulation(c_id=int(cid))
     data_type = client_config['data_type']
     lr = client_config['lr']
+    total_clients = client_config['min_avalaible_clients']
     out_file_dir = gen_out_file_client(client_config)
     if client_config['dataset'] == 'cifar-10':
         input_shape = (32, 32, 3)
@@ -40,11 +28,11 @@ def main() -> None:
     model = create_model(client_config['model'],input_shape=input_shape,num_classes=10)
     compile_model(model,client_config['optimizer'],lr=lr)
     if client_config['dataset'] == 'mnist':
-        data = MnistData(10, data_type)
+        data = MnistData(total_clients, data_type)
     elif client_config['dataset'] == 'cifar-10':
-        data = Cifar10Data(10, data_type)
+        data = Cifar10Data(total_clients, data_type)
     else:
-        data = FashionMnistData(10, data_type)
+        data = FashionMnistData(total_clients, data_type)
     # Compile model
     model.compile(
         optimizer=tf.keras.optimizers.Adam(),
@@ -52,8 +40,7 @@ def main() -> None:
         metrics=["accuracy"],
         run_eagerly=True,
     )
-
-    client_name = f"client_{client_config['client_id']}"
+    client_name = f"client_{cid}"
     print(f"Data Type : {client_config['data_type']}")
     # Load a subset of dataset to simulate the local data partition
     if data_type == "one-class-niid":
@@ -85,11 +72,19 @@ def main() -> None:
 
     print("Data Shape  : {}".format(x_train.shape))
     # Start Flower client
-    client = FashionMnistClient(model, (x_train, y_train), (x_test, y_test),
-                                epochs=client_config['epochs'], batch_size=client_config['batch_size'], hpo=client_config['hpo'], client_name=client_name,file_path=out_file_dir)
-
-    fl.client.start_numpy_client(f"{client_config['server_address']}:8080", client=client)
+    client = FlwrClient(model, (x_train, y_train), (x_test, y_test),
+                                epochs=client_config['epochs'], batch_size=client_config['batch_size'],
+                                  hpo=client_config['hpo'], client_name=client_name,file_path=out_file_dir,
+                                  save_train_res = client_config['save_train_res'])
+    return client
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    client_config = generate_config_client(args)
+    client = generate_client(cid=client_config['client_id'])
+    fl.client.start_numpy_client(
+        server_address="127.0.0.1:8080",
+        client=client,
+    )
+    # fl.client.start_numpy_client(f"{client_config['server_address']}:8080", client=client)

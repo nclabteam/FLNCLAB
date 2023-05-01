@@ -29,7 +29,7 @@ Where python3.8 implies your version of installed python. If you are using any o
 
 5. Create a new virtual environment
 ```bash
-~$ python3 -m venv venv-flwr
+~$ python3.8 -m venv venv-flwr
 ```
 Where "venv-flwr" is the name of the virtual environment that we want to create. We can choose any name that we like instead of venv-flwr.
 
