@@ -58,6 +58,8 @@ python run_simulation.py
 ```
   This script will read the confugration from `config.yaml` file and starts the simulation.
 
+  The outputs will be saved in `out` directory.
+
 
 ## Description about  [`config.yaml`](/config.yaml) file
 The `config.yaml` file is a configuration file for this framework that trains a Federated Learning model.
@@ -85,7 +87,7 @@ The `server` section contains the configurations for the server that coordinates
 - `min_fit_clients` : This field specifies the minimum number of participating clients required for training in each round.
 - `fraction_evaluate` : This field specifies the fraction of participating clients used for evaluation in each round.
 - `min_avalaible_clients` : This field specifies the minimum number of clients that should be available for the training process.
-- `strategy` : This field specifies the strategy used for Federated Learning. Currently supported strategies are [ `fedavg`, `fedyogi`, `fedadagrad` ,`fedavgm` ].
+- `strategy` : This field specifies the strategy used for Federated Learning. Currently supported strategies are [ `fedavg`, `fedyogi`, `fedadagrad` ,`fedavgm` ] Detailed explination can be found [here](./docs/strategies.md)
 
 ### Client Section
 The `client` section contains the configurations for the clients participating in the Federated Learning process.
