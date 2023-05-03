@@ -1,6 +1,6 @@
 ## A Simple Flower based framework for federated Learning.
 
-### Note: This code is written antested on Ubuntu and can work easily on any linux based distribution. For windows users some steps needs to changed.
+### Note: This code is written and tested on Ubuntu and can work easily on any linux based distribution. For windows users some steps needs to changed.
 
 ### Steps to use this repo
 
@@ -74,7 +74,7 @@ The `common` section contains the common configurations used in this framework.
 - `target_acc` : This field specifies the target accuracy that the model needs to achieve. It can take any value greater than `0`.
 - `model` : This field specifies the model architecture used in the training process. Currently Implemented models are [  `mobilenetv2`, `simplecnn`, `simplednn`, `kerasexpcnn`, `mnistcnn`, `efficientnet`, `fedavgcnn`, `fmcnn` ]. Detailed explination can be found [here](./docs/models.md)
 - `optimizer` : This field specifies the optimizer used in the training process. It could be either `sgd` or `adam`.
-- `simulation` : This field specifies whether the training process is a simulation or not.
+- `simulation` : This field specifies whether the training process is run as a simulation or not.
 
 ### Server Section
 The `server` section contains the configurations for the server that coordinates the Federated Learning process.
