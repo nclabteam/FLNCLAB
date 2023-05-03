@@ -113,7 +113,7 @@ class FMCNNModel(Model):
         super().__init__(input_shape, num_classes, weights)
     
         # Kernel initializer
-        kernel_initializer = tf.keras.initializers.glorot_uniform(seed=SEED)
+        kernel_initializer = tf.keras.initializers.glorot_uniform(seed=123)
 
         # Architecture
         inputs = tf.keras.layers.Input(shape=input_shape)
@@ -153,8 +153,7 @@ class FedAVGCNN(Model):
      """
     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
         super().__init__(input_shape, num_classes, weights)
-        print(input_shape)
-
+        
         self._model = tf.keras.models.Sequential([
             tf.keras.layers.Conv2D(filters=32, kernel_size=(5,5), padding='same', activation='relu', input_shape=input_shape),
             tf.keras.layers.MaxPooling2D(pool_size=(2, 2)),
