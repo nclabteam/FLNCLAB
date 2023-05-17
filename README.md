@@ -6,7 +6,7 @@
 
 1. Clone this repository using command
 ```bash
- git clone https://github.com/nclabteam/FLMAK.git
+ git clone https://github.com/nclabteam/FLNCLAB.git
 ```
 2. After clone cd into cloned directory and open terminal.
 
