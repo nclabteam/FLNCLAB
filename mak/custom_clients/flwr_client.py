@@ -11,7 +11,7 @@ from datetime import datetime
 from flwr.common.logger import log
 from datetime import date
 
-from mak.hpo import es,reduce_lr
+from mak.hpo import es,reduce_lr, CSVLoggerWithLr
 
 class FlwrClient(fl.client.NumPyClient):
     """Flower NumPy Client implementing Fashion-MNIST image classification."""
@@ -22,7 +22,7 @@ class FlwrClient(fl.client.NumPyClient):
         xy_test: Tuple[np.ndarray, np.ndarray],
         epochs: int,
         batch_size: int,
-        hpo:int,
+        hpo: bool,
         client_name: string,
         file_path = None,
         save_train_res = False,
@@ -42,21 +42,14 @@ class FlwrClient(fl.client.NumPyClient):
         self.file_path = file_path
         self.save_train_res = save_train_res
         self.callbacks = []
-        filename = self.file_path
-        if self.save_train_res == True:
-            self.callbacks.append(tf.keras.callbacks.CSVLogger(
-            filename, separator=',', append=False
-        ))
-        if self.hpo == True:
-            log(INFO,"+++ Running With HPO +++")
-            self.callbacks.append([es,reduce_lr])
 
     def get_parameters(self,config):
         return self.model.get_weights()
 
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
-        r = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, validation_split=0.15, verbose=1,callbacks=self.callbacks)
+        r = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, validation_split=0.15, 
+                           verbose=1,callbacks=self.get_callbacks(int(config['round'])))
         hist = r.history
         return self.model.get_weights(), len(self.x_train), {}
 
@@ -66,4 +59,12 @@ class FlwrClient(fl.client.NumPyClient):
         loss, accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=1)
         print("Eval accuracy on Client {} : {}".format(self.client_name,accuracy))
         return loss, len(self.x_test), {"accuracy": accuracy}
+    
+    def get_callbacks(self,server_round : int):
+        if self.save_train_res == True:
+            self.callbacks.append(CSVLoggerWithLr(filename=self.file_path,append=True,server_round=server_round))
+        if self.hpo == True:
+            log(INFO,f"+++ Running With HPO +++ Round : {server_round}")
+            self.callbacks = [es,reduce_lr,CSVLoggerWithLr(filename=self.file_path,append=True,server_round=server_round)]
+        return self.callbacks
             

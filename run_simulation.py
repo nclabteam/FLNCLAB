@@ -3,7 +3,7 @@ import math
 from mak.utils import set_seed
 from mak.utils import generate_config_client, parse_args, get_strategy, generate_config_simulation, get_eval_fn, gen_dir_outfile_server
 import argparse
-from mak.utils import set_seed, create_model, compile_model,get_eval_fn
+from mak.utils import set_seed, create_model, compile_model,get_eval_fn, fit_config
 # Make TensorFlow logs less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -28,7 +28,7 @@ def main() -> None:
     model = create_model(config['model'],input_shape=input_shape,num_classes=10)
     # Compile model
     compile_model(model,config['optimizer'],config['lr'])
-    strategy = get_strategy(config=config,get_eval_fn=get_eval_fn,model=model,dataset=dataset,num_clients=num_clients)
+    strategy = get_strategy(config=config,get_eval_fn=get_eval_fn,model=model,dataset=dataset,num_clients=num_clients,on_fit_config_fn=fit_config)
     server = ServerSaveData(
         strategy=strategy, client_manager=fl.server.client_manager.SimpleClientManager(),out_file_path=out_file_path,target_acc=config['target_acc'])
     

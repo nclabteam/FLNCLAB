@@ -202,7 +202,7 @@ def gen_out_file_client(config):
     now = datetime.now()
     current_time = now.strftime("%H-%M-%S")
 
-    file_path = os.path.join(final_dir_path,f"{current_time}_client_{config['client_id']}.csv")
+    file_path = os.path.join(final_dir_path,f"client_{config['client_id']}.csv")
 
     return file_path
 
@@ -290,7 +290,7 @@ def generate_config_simulation(c_id):
         except yaml.YAMLError as exc:
             print(exc)
 
-def get_strategy(config,get_eval_fn,model,dataset,num_clients):
+def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
      # Create strategy
     if config['strategy'] == "fedyogi":
         strategy = fl.server.strategy.FedYogi(
@@ -301,6 +301,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients):
             min_available_clients=config['min_avalaible_clients'],
             evaluate_fn=get_eval_fn(model,dataset,num_clients),
             evaluate_metrics_aggregation_fn=agg_metrics,
+            on_fit_config_fn=on_fit_config_fn,
             initial_parameters=fl.common.ndarrays_to_parameters(
                 model.get_weights()),
             eta=1e-2,
@@ -318,6 +319,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients):
             min_available_clients=config['min_avalaible_clients'],
             evaluate_fn=get_eval_fn(model,dataset,num_clients),
             evaluate_metrics_aggregation_fn=agg_metrics,
+            on_fit_config_fn=on_fit_config_fn,
             initial_parameters=fl.common.ndarrays_to_parameters(
                 model.get_weights()),
             eta=1e-2,
@@ -333,6 +335,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients):
             min_available_clients=config['min_avalaible_clients'],
             evaluate_fn=get_eval_fn(model,dataset,num_clients),
             evaluate_metrics_aggregation_fn=agg_metrics,
+            on_fit_config_fn=on_fit_config_fn,
             initial_parameters=fl.common.ndarrays_to_parameters(
                 model.get_weights()),
             server_learning_rate=1.0,
@@ -347,6 +350,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients):
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
             evaluate_metrics_aggregation_fn=agg_metrics,
+            on_fit_config_fn=on_fit_config_fn,
             initial_parameters=fl.common.ndarrays_to_parameters(
                 model.get_weights()),
         )
@@ -455,6 +459,17 @@ def save_simulation_history(hist : fl.server.history.History, path):
     json_obj = json.dumps(data,indent=4)
     with open(path.replace('.csv','.json'),"w") as outfile:
         outfile.write(json_obj)
+
+def fit_config(server_round: int):
+    """Return training configuration dict for each round.
+
+    passes the current round number to the client
+    """
+    config = {
+        "round": server_round,
+    }
+    return config
+
 
 
 

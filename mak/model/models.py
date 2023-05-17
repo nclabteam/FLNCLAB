@@ -3,6 +3,7 @@ from tokenize import String
 from typing import Tuple
 import tensorflow as tf
 
+BN_AXIS = 3
 
 class Model:
     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
@@ -74,18 +75,6 @@ class MNISTCNN(Model):
         tf.keras.layers.Dense(self.num_classes, activation="softmax"),
     ])
 
-# class SimpleDNN(Model):
-#     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
-#         super().__init__(input_shape, num_classes, weights)
-
-#         self._model = tf.keras.Sequential([
-#             tf.keras.layers.Flatten(input_shape=input_shape),
-#             tf.keras.layers.Dense(512, activation='relu'),
-#             tf.keras.layers.Dense(256, activation='relu'),
-#             tf.keras.layers.Dense(128, activation='relu'),
-#             tf.keras.layers.Dense(64, activation='relu'),
-#             tf.keras.layers.Dense(self.num_classes, activation='softmax')
-#         ])
 
 class SimpleDNN(Model):
     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
@@ -105,8 +94,6 @@ class EfficientNetB0(Model):
         self._model = tf.keras.applications.EfficientNetB0(
             self.input_shape, classes=self.num_classes, weights=self.weights)
 
-# class Vgg16(Model):
-#     raise Exception("Not Implemented Yet")
 
 class FMCNNModel(Model):
     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
@@ -163,3 +150,84 @@ class FedAVGCNN(Model):
             tf.keras.layers.Dense(512, activation='relu'),
             tf.keras.layers.Dense(self.num_classes, activation='softmax'),
         ])
+
+
+class ResNet18(Model):
+    """Implementation of ResNet-18 architecture.
+    This is not tested needs to be tested
+    """
+    def __init__(self, input_shape, num_classes, weights=None,layer_params=[2, 2, 2, 2], pooling=None):
+        super().__init__(input_shape, num_classes, weights)
+        self.layer_params = layer_params
+        self.pooling = pooling
+        img_input = tf.keras.layers.Input(shape=input_shape)
+
+
+        x = tf.keras.layers.ZeroPadding2D(padding=(3, 3), name='conv1_pad')(img_input)
+        x = tf.keras.layers.Conv2D(64, (7, 7),
+                        strides=(2, 2),
+                        padding='valid',
+                        kernel_initializer='he_normal',
+                        name='conv1')(x)
+        x = tf.keras.layers.BatchNormalization(axis=3, name='bn_conv1')(x)
+        x = tf.keras.layers.Activation('relu')(x)
+        x = tf.keras.layers.ZeroPadding2D(padding=(1, 1), name='pool1_pad')(x)
+        x = tf.keras.layers.MaxPooling2D((3, 3), strides=(2, 2))(x)
+
+        x = self.make_basic_block_layer(x, filter_num=64,
+                                    blocks=self.layer_params[0])
+        x = self.make_basic_block_layer(x, filter_num=128,
+                                            blocks=self.layer_params[1],
+                                            stride=2)
+        x = self.make_basic_block_layer(x, filter_num=256,
+                                            blocks=self.layer_params[2],
+                                            stride=2)
+        x = self.make_basic_block_layer(x, filter_num=512,
+                                            blocks=self.layer_params[3],
+                                            stride=2)
+
+        if self.pooling == 'avg':
+            x = tf.keras.layers.GlobalAveragePooling2D()(x)
+        elif self.pooling == 'max':
+            x = tf.keras.layers.GlobalMaxPooling2D()(x)
+        outputs = tf.keras.layers.Dense(self.num_classes, activation='softmax')(x)
+        self._model = tf.keras.Model(img_input, outputs, name='ResNet-18')
+
+            
+    def make_basic_block_base(self,inputs, filter_num, stride=1):
+        x = tf.keras.layers.Conv2D(filters=filter_num,
+                                            kernel_size=(3, 3),
+                                            strides=stride,
+                                            kernel_initializer='he_normal',
+                                            padding="same")(inputs)
+        x = tf.keras.layers.BatchNormalization(axis=BN_AXIS)(x)
+        x = tf.keras.layers.Conv2D(filters=filter_num,
+                                            kernel_size=(3, 3),
+                                            strides=1,
+                                            kernel_initializer='he_normal',
+                                            padding="same")(x)
+        x = tf.keras.layers.BatchNormalization(axis=BN_AXIS)(x)
+
+        shortcut = inputs
+        if stride != 1:
+            shortcut = tf.keras.layers.Conv2D(filters=filter_num,
+                                                kernel_size=(1, 1),
+                                                strides=stride,
+                                                kernel_initializer='he_normal')(inputs)
+            shortcut = tf.keras.layers.BatchNormalization(axis=BN_AXIS)(shortcut)
+
+        x = tf.keras.layers.add([x, shortcut])
+        x = tf.keras.layers.Activation('relu')(x)
+
+        return x
+
+    def make_basic_block_layer(self,inputs, filter_num, blocks, stride=1):
+        x = self.make_basic_block_base(inputs, filter_num, stride=stride)
+
+        for _ in range(1, blocks):
+            x = self.make_basic_block_base(x, filter_num, stride=1)
+
+        return x
+   
+
+    

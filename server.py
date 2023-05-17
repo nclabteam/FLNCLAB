@@ -11,9 +11,7 @@ import flwr as fl
 
 import yaml
 from mak.utils import generate_config_server,gen_dir_outfile_server, get_strategy
-from mak.utils import set_seed, create_model, compile_model,get_eval_fn
-
-
+from mak.utils import set_seed, create_model, compile_model,get_eval_fn, fit_config
 
 
 def main() -> None:
@@ -34,7 +32,8 @@ def main() -> None:
     # Compile model
     compile_model(model,server_config['optimizer'],server_config['lr'])
     num_clients = server_config['min_avalaible_clients']
-    strategy = get_strategy(config=server_config,get_eval_fn=get_eval_fn,model=model,dataset=dataset,num_clients=num_clients)
+    strategy = get_strategy(config=server_config,get_eval_fn=get_eval_fn,model=model,
+                            dataset=dataset,num_clients=num_clients,on_fit_config_fn=fit_config)
 
     print(f"Using Strategy : {strategy.__class__}")
 
