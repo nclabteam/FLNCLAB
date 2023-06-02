@@ -7,12 +7,12 @@ common:
   dataset : fashionmnist #data_set = data set used  one among [fashionmnist,mnist,cifar-10]
   dirichlet_alpha : 0.5 #dirichlet concentration parameter
   target_acc : 0.91
-  model : fedavgcnn #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn]
+  model : fedavgcnn #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn,resnet-18]
   optimizer : adam # one among [sgd,adam]
   simulation : true
 
 server:
-  max_rounds : 111
+  max_rounds : 2
   address : 203.255.77.246
   fraction_fit : 0.5
   min_fit_clients: 10

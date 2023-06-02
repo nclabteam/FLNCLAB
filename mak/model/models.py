@@ -20,8 +20,26 @@ class Model:
 class MobileNetV2(Model):
     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
         super().__init__(input_shape, num_classes, weights)
-        self._model = tf.keras.applications.MobileNetV2(
-            self.input_shape, classes=self.num_classes, weights=self.weights)
+        base_model = tf.keras.applications.MobileNetV2(
+        input_shape=self.input_shape,
+        include_top=False,
+        weights=self.weights
+    )
+        # Freeze the pre-trained model weights
+        base_model.trainable = True
+
+        for layer in base_model.layers[:100]:
+            layer.trainable =  False
+        # Trainable classification head
+        maxpool_layer = tf.keras.layers.GlobalMaxPooling2D()
+        prediction_layer = tf.keras.layers.Dense(units=self.num_classes, activation='softmax')
+        # Layer classification head with feature detector
+        self._model = tf.keras.models.Sequential([
+            base_model,
+            maxpool_layer,
+            prediction_layer
+        ])
+
 
 
 class SimpleCNN(Model):
@@ -156,7 +174,7 @@ class ResNet18(Model):
     """Implementation of ResNet-18 architecture.
     This is not tested needs to be tested
     """
-    def __init__(self, input_shape, num_classes, weights=None,layer_params=[2, 2, 2, 2], pooling=None):
+    def __init__(self, input_shape, num_classes, weights=None,layer_params=[2, 2, 2, 2], pooling='avg'):
         super().__init__(input_shape, num_classes, weights)
         self.layer_params = layer_params
         self.pooling = pooling
