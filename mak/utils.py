@@ -238,6 +238,8 @@ def create_model(name,input_shape, num_classes=10):
         return FedAVGCNN(input_shape=input_shape,num_classes=num_classes)._model
     elif name == 'fmcnn':
         return FMCNNModel(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'resnet-18':
+        return ResNet18(input_shape=input_shape,num_classes=num_classes)._model
     else:
         print("Invalid model name. Model name must be among [ mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet]")
 

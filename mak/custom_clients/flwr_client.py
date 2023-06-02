@@ -49,7 +49,7 @@ class FlwrClient(fl.client.NumPyClient):
     def fit(self, parameters, config):
         self.model.set_weights(parameters)
         r = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, validation_split=0.15, 
-                           verbose=1,callbacks=self.get_callbacks(int(config['round'])))
+                           verbose=0,callbacks=self.get_callbacks(int(config['round'])))
         hist = r.history
         return self.model.get_weights(), len(self.x_train), {}
 
