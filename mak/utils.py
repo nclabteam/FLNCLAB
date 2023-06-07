@@ -297,7 +297,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
     if config['strategy'] == "fedyogi":
         strategy = fl.server.strategy.FedYogi(
             fraction_fit=config['fraction_fit'],
-            fraction_evaluate=0.2,
+            fraction_evaluate= config['fraction_evaluate'],
             min_fit_clients=config['min_fit_clients'],
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
@@ -315,7 +315,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
     elif config['strategy'] == "fedadagrad":
         strategy = fl.server.strategy.FedAdagrad(
             fraction_fit=config['fraction_fit'],
-            fraction_evaluate=0.2,
+            fraction_evaluate= config['fraction_evaluate'],
             min_fit_clients=config['min_fit_clients'],
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
@@ -331,7 +331,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
     elif config['strategy'] == "fedavgm":
         strategy = fl.server.strategy.FedAvgM(
             fraction_fit=config['fraction_fit'],
-            fraction_evaluate=0.2,
+            fraction_evaluate= config['fraction_evaluate'],
             min_fit_clients=config['min_fit_clients'],
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
@@ -347,7 +347,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
         strategy = fl.server.strategy.FedAvg(
             evaluate_fn=get_eval_fn(model,dataset,num_clients),
             fraction_fit=config['fraction_fit'],
-            fraction_evaluate=0.2,
+            fraction_evaluate= config['fraction_evaluate'],
             min_fit_clients=config['min_fit_clients'],
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
