@@ -26,6 +26,7 @@ def generate_config_server(args):
 
             server_config['max_rounds'] = config['server']['max_rounds']
             server_config['fraction_fit'] = config['server']['fraction_fit']
+            server_config['fraction_evaluate'] = config['server']['fraction_evaluate']
             server_config['min_fit_clients'] = config['server']['min_fit_clients']
             server_config['min_avalaible_clients'] = config['server']['min_avalaible_clients']
             server_config['strategy'] = config['server']['strategy']
@@ -286,6 +287,7 @@ def generate_config_simulation(c_id):
             simu_config['min_avalaible_clients'] = config['server']['min_avalaible_clients']
             simu_config['max_rounds'] = config['server']['max_rounds']
             simu_config['fraction_fit'] = config['server']['fraction_fit']
+            simu_config['fraction_evaluate'] = config['server']['fraction_evaluate']
             simu_config['min_fit_clients'] = config['server']['min_fit_clients']
             simu_config['target_acc'] = config['common']['target_acc']
             return simu_config
@@ -369,7 +371,6 @@ def agg_metrics(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 def get_eval_fn(model,dataset,num_clients):
     """Return an evaluation function for server-side evaluation."""
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
-    # load last 5k samples for testing
     if dataset =='mnist':
         (x_val, y_val) = MnistData(num_clients=num_clients).load_test_data()
     elif dataset == 'cifar-10':
