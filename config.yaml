@@ -4,7 +4,7 @@
 common:
   data_type : iid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid','dirichlet_niid']
   hpo : true #hpo = Hyperparameter optimisation true or false
-  dataset : fashionmnist #data_set = data set used  one among [fashionmnist,mnist,cifar-10]
+  dataset : cifar-10 #data_set = data set used  one among [fashionmnist,mnist,cifar-10]
   dirichlet_alpha : 0.5 #dirichlet concentration parameter
   target_acc : 0.91
   model : fedavgcnn #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn,resnet-18]

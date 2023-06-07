@@ -101,11 +101,13 @@ class Cifar10Data(Dataset):
      # Convert class vectors to one-hot encoded labels
         num_samples_train = int(len(self.x_test) / self.num_clients)
         y_test = tf.keras.utils.to_categorical(self.y_test, 10)
-        j = list(zip(self.x_test, y_test))
-        selected = random.sample(j, num_samples_train)
-        selected_training_data = [td for (td, l) in selected]
-        selected_labels = [l for (td, l) in selected]
-        return (selected_training_data, selected_labels)
+        total_samples = self.x_test.shape[0]
+        # Generate random indices for selecting samples
+        random_indices = np.random.choice(total_samples, num_samples_train, replace=False)
+        # Select the samples and labels based on the random indices
+        random_x_test = self.x_test[random_indices]
+        random_y_test = y_test[random_indices]
+        return (random_x_test, random_y_test)
     
     def load_all_test_data(self):
         '''returns all test data samples'''
