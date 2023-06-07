@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 from typing import Tuple, cast
 import string
+import random
 SEED = 2000
 
 
@@ -96,7 +97,18 @@ class Cifar10Data(Dataset):
         return (x_train, y_train), (x_test, y_test)
 
     def load_test_data(self):
-    # returns all the test data samples
+        '''returns (num_test_samples / num_clients)'''
+     # Convert class vectors to one-hot encoded labels
+        num_samples_train = int(len(self.x_test) / self.num_clients)
+        y_test = tf.keras.utils.to_categorical(self.y_test, 10)
+        j = list(zip(self.x_test, y_test))
+        selected = random.sample(j, num_samples_train)
+        selected_training_data = [td for (td, l) in selected]
+        selected_labels = [l for (td, l) in selected]
+        return (selected_training_data, selected_labels)
+    
+    def load_all_test_data(self):
+        '''returns all test data samples'''
      # Convert class vectors to one-hot encoded labels
         y_test = tf.keras.utils.to_categorical(self.y_test, 10)
         return (self.x_test, y_test)
