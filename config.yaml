@@ -18,7 +18,7 @@ server:
   min_fit_clients: 10
   min_avalaible_clients : 20  # total number of clients participating in training
   fraction_evaluate : 0.2
-  strategy : fedavgm #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm']
+  strategy : fedavgm #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm','fedprox']
 
 client:
   epochs : 11

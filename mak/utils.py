@@ -345,6 +345,20 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
             server_learning_rate=1.0,
             server_momentum=0.2,
         )
+    elif config['strategy'] == "fedprox": #from flwr 1.XX
+        strategy = fl.server.strategy.FedProx(
+            fraction_fit=config['fraction_fit'],
+            fraction_evaluate= config['fraction_evaluate'],
+            min_fit_clients=config['min_fit_clients'],
+            min_evaluate_clients=2,
+            min_available_clients=config['min_avalaible_clients'],
+            evaluate_fn=get_eval_fn(model,dataset,num_clients),
+            evaluate_metrics_aggregation_fn=agg_metrics,
+            on_fit_config_fn=on_fit_config_fn,
+            proximal_mu = 0.5,
+            initial_parameters=fl.common.weights_to_parameters(
+                model.get_weights()),
+        )
     else:
         strategy = fl.server.strategy.FedAvg(
             evaluate_fn=get_eval_fn(model,dataset,num_clients),
