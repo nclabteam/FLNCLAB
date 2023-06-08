@@ -356,7 +356,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
             evaluate_metrics_aggregation_fn=agg_metrics,
             on_fit_config_fn=on_fit_config_fn,
             proximal_mu = 0.5,
-            initial_parameters=fl.common.weights_to_parameters(
+            initial_parameters=fl.common.ndarrays_to_parameters(
                 model.get_weights()),
         )
     else:
