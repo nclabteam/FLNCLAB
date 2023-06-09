@@ -2,23 +2,23 @@
 # config
 
 common:
-  data_type : iid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid','dirichlet_niid']
-  hpo : true #hpo = Hyperparameter optimisation true or false
+  data_type : dirichlet-niid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid','dirichlet-niid']
+  hpo : false #hpo = Hyperparameter optimisation true or false
   dataset : cifar-10 #data_set = data set used  one among [fashionmnist,mnist,cifar-10]
   dirichlet_alpha : 0.5 #dirichlet concentration parameter
   target_acc : 0.91
   model : fedavgcnn #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn,resnet-18]
-  optimizer : adam # one among [sgd,adam]
+  optimizer : sgd # one among [sgd,adam]
   simulation : true
 
 server:
-  max_rounds : 2
+  max_rounds : 3
   address : 203.255.77.246
-  fraction_fit : 0.5
+  fraction_fit : 0.05
   min_fit_clients: 10
-  min_avalaible_clients : 20  # total number of clients participating in training
-  fraction_evaluate : 0.2
-  strategy : fedavgm #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm','fedprox']
+  min_avalaible_clients : 200  # total number of clients participating in training
+  fraction_evaluate : 0.05
+  strategy : fedavg #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm','fedprox']
 
 client:
   epochs : 11

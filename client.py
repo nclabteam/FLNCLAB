@@ -59,10 +59,10 @@ def generate_client(cid : str) -> fl.client.Client:
         print(f"Class 1 = {class_1}, Class 2 = {class_2}")
         (x_train, y_train), (x_test, y_test) = data.load_data_two_classes(
             class_1=class_1, class_2=class_2)
-    elif data_type == "dirichlet_niid":
+    elif data_type == "dirichlet-niid":
         alpha = client_config['dirichlet_alpha']
         print("Using Dirichlet Distribution with alpha = {}".format(client_config['dirichlet_alpha']))
-        (x_train, y_train), (_, _) = data.load_data_niid_dirchlet(alpha=alpha,min_size=200,partition=client_config['client_id'])
+        (x_train, y_train), (_, _) = data.load_data_niid_dirchlet(alpha=alpha,min_size=100,partition=client_config['client_id'])
         
         (x_test,y_test) = data.load_test_data()
     else:
@@ -87,4 +87,3 @@ if __name__ == "__main__":
         server_address="127.0.0.1:8080",
         client=client,
     )
-    # fl.client.start_numpy_client(f"{client_config['server_address']}:8080", client=client)
