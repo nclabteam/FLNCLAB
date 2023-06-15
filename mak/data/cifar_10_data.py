@@ -273,8 +273,7 @@ class Cifar10Data(Dataset):
         y_train = federated_data[partition]['y']
         y_train = tf.keras.utils.to_categorical(y_train, 10)
         #returns train data in dirchlet distribution and not the validation data
-        return (x_train, y_train), (self.x_test, self.y_test)
-
+        return (x_train, y_train), ([], [])
 
 
 def shuffle(x_orig: np.ndarray, y_orig: np.ndarray, seed: int = 2000) -> Tuple[np.ndarray, np.ndarray]:
