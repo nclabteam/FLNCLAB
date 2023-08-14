@@ -64,16 +64,29 @@ def generate_client(cid : str) -> fl.client.Client:
     print("Data Shape  : {}".format(x_train.shape))
     # Start Flower client
     
-    client = FlwrClient( model = model,
-                        xy_train = (x_train, y_train), 
-                        xy_test = (x_test, y_test),
-                        epochs=client_config['epochs'],
-                        batch_size = client_config['batch_size'],
-                        hpo = client_config['hpo'],
-                        client_name = client_name,
-                        file_path = out_file_dir,
-                        save_train_res = client_config['save_train_res'],
-                        )
+    if client_config['strategy'] == 'fedex':
+        client =  FedExClient( config = client_config,
+                              model = model,
+                              xy_train = (x_train, y_train), 
+                              xy_test = (x_test, y_test),
+                              epochs=client_config['epochs'],
+                              batch_size = client_config['batch_size'],
+                              client_name = client_name,
+                              hpo = client_config['hpo'],
+                              file_path = out_file_dir,
+                              save_train_res = client_config['save_train_res'],
+                              )
+    else:
+        client = FlwrClient( model = model,
+                            xy_train = (x_train, y_train), 
+                            xy_test = (x_test, y_test),
+                            epochs=client_config['epochs'],
+                            batch_size = client_config['batch_size'],
+                            hpo = client_config['hpo'],
+                            client_name = client_name,
+                            file_path = out_file_dir,
+                            save_train_res = client_config['save_train_res'],
+                            )
     return client
 
 

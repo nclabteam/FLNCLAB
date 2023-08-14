@@ -2,30 +2,33 @@
 # config
 
 common:
-  data_type : dirichlet-niid  #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid','dirichlet-niid']
+  data_type : iid #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid','dirichlet-niid']
   hpo : false #hpo = Hyperparameter optimisation true or false
   dataset : cifar-10 #data_set = data set used  one among [fashionmnist,mnist,cifar-10]
-  dirichlet_alpha : 0.5 #dirichlet concentration parameter
-  target_acc : 0.91
-  model : fedavgcnn #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn,resnet-18]
+  dirichlet_alpha : 0.11 #dirichlet concentration parameter
+  target_acc : 0.80
+  model : resnet-18 #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn,resnet-18]
   optimizer : sgd # one among [sgd,adam]
   simulation : true
 
 server:
-  max_rounds : 3
-  address : 203.255.77.246
+  max_rounds : 500
+  address : 127.0.0.1
   fraction_fit : 0.05
   min_fit_clients: 10
   min_avalaible_clients : 200  # total number of clients participating in training
   fraction_evaluate : 0.05
-  strategy : fedavg #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm','fedprox']
+  strategy : fedex #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm','fedprox']
 
 client:
   epochs : 11
   batch_size : 32
   lr: 0.001  #[0.0001,0.001,0.005,0.01,0.1,0.2]
-  save_train_res : true
+  save_train_res : True
 
+fedex:
+  hyperparam_config_nr : 120 # size of hyperparameter search space
+  hyperparam_file : './hyperparam-logs/indices.json'
 
 
 

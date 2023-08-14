@@ -8,3 +8,6 @@ __pycache__/
 *.pyc
 run_clients.sh
 config.yaml
+distribution_history.csv
+gain_history.csv
+hyperparam-logs/

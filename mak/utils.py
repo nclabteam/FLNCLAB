@@ -12,6 +12,7 @@ import flwr as fl
 from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
 from mak.data.cifar_10_data import Cifar10Data
+from mak.custom_strategy.fedex_strategy import CustomFedEx
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from flwr.common import Metrics
 import json
@@ -40,6 +41,10 @@ def generate_config_server(args):
             server_config['lr'] = config['client']['lr']
             server_config['batch_size'] = config['client']['batch_size']
             server_config['optimizer'] = config['common']['optimizer']
+
+            if config['fedex']:
+                server_config['hyperparam_config_nr'] = config['fedex']['hyperparam_config_nr']
+                server_config['hyperparam_file'] = config['fedex']['hyperparam_file']
 
             return server_config
         except yaml.YAMLError as exc:
@@ -290,6 +295,10 @@ def generate_config_simulation(c_id):
             simu_config['fraction_evaluate'] = config['server']['fraction_evaluate']
             simu_config['min_fit_clients'] = config['server']['min_fit_clients']
             simu_config['target_acc'] = config['common']['target_acc']
+
+            if config['fedex']:
+                simu_config['hyperparam_config_nr'] = config['fedex']['hyperparam_config_nr']
+                simu_config['hyperparam_file'] = config['fedex']['hyperparam_file']
             return simu_config
         except yaml.YAMLError as exc:
             print(exc)
@@ -359,6 +368,19 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
             initial_parameters=fl.common.ndarrays_to_parameters(
                 model.get_weights()),
         )
+    elif config['strategy'] == "fedex":
+        strategy = CustomFedEx(
+            config=config,
+            fraction_fit=config['fraction_fit'],
+            eval_fn=get_eval_fn(model,dataset,num_clients),
+            fraction_eval= config['fraction_evaluate'],
+            min_fit_clients=config['min_fit_clients'],
+            min_eval_clients=2,
+            min_available_clients=config['min_avalaible_clients'],
+            on_fit_config_fn=on_fit_config_fn,
+            initial_parameters=fl.common.ndarrays_to_parameters(
+                model.get_weights()),
+        )   
     else:
         strategy = fl.server.strategy.FedAvg(
             evaluate_fn=get_eval_fn(model,dataset,num_clients),
@@ -399,7 +421,11 @@ def get_eval_fn(model,dataset,num_clients):
         parameters: fl.common.NDArrays,
         config: Dict[str, fl.common.Scalar],
     ) -> Optional[Tuple[float, Dict[str, fl.common.Scalar]]]:
-        model.set_weights(parameters)  # Update model with the latest parameters
+        try:
+            model.set_weights(parameters)
+        except ValueError:
+            parameters = parameters[:-1]
+            model.set_weights(parameters)
         loss, accuracy = model.evaluate(x_val, y_val)
         model.save('./saved_model')
         print("Accuracy {} ".format(accuracy))
