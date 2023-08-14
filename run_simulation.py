@@ -35,7 +35,6 @@ def main() -> None:
     hist = fl.simulation.start_simulation(
         client_fn=generate_client,
         num_clients=config['min_avalaible_clients'],
-        client_resources={"num_cpus": 4},
         config=fl.server.ServerConfig(num_rounds=config['max_rounds']),
         strategy = strategy,
         server = server,

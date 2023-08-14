@@ -62,7 +62,7 @@ def generate_client(cid : str) -> fl.client.Client:
     elif data_type == "dirichlet-niid":
         alpha = client_config['dirichlet_alpha']
         print("Using Dirichlet Distribution with alpha = {}".format(client_config['dirichlet_alpha']))
-        (x_train, y_train), (_, _) = data.load_data_niid_dirchlet(alpha=alpha,min_size=100,partition=client_config['client_id'])
+        (x_train, y_train), (_, _) = data.load_data_niid_dirchlet(alpha=alpha,min_size=15,partition=client_config['client_id'])
         
         (x_test,y_test) = data.load_test_data()
     else:
