@@ -1,19 +1,17 @@
 from mak.utils import generate_config_client, gen_out_file_client, generate_config_simulation
 from mak.custom_clients.flwr_client import FlwrClient
+from mak.custom_clients.fedex_client import FedExClient
 from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
 from mak.data.cifar_10_data import Cifar10Data
 from mak.model.models import SimpleCNN, SimpleDNN, KerasExpCNN
 import os
 import flwr as fl
-import tensorflow as tf
-import numpy as np
-from typing import Dict, Tuple, cast
-from mak.utils import set_seed, create_model, compile_model
+
+from mak.utils import  create_model, compile_model
 from mak.utils import parse_args
 # Make TensorFlow log less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
 
 def generate_client(cid : str) -> fl.client.Client:
     client_config = generate_config_simulation(c_id=int(cid))
@@ -33,13 +31,6 @@ def generate_client(cid : str) -> fl.client.Client:
         data = Cifar10Data(total_clients, data_type)
     else:
         data = FashionMnistData(total_clients, data_type)
-    # Compile model
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(),
-        loss=tf.keras.losses.categorical_crossentropy,
-        metrics=["accuracy"],
-        run_eagerly=True,
-    )
     client_name = f"client_{cid}"
     print(f"Data Type : {client_config['data_type']}")
     # Load a subset of dataset to simulate the local data partition
@@ -72,10 +63,17 @@ def generate_client(cid : str) -> fl.client.Client:
 
     print("Data Shape  : {}".format(x_train.shape))
     # Start Flower client
-    client = FlwrClient(model, (x_train, y_train), (x_test, y_test),
-                                epochs=client_config['epochs'], batch_size=client_config['batch_size'],
-                                  hpo=client_config['hpo'], client_name=client_name,file_path=out_file_dir,
-                                  save_train_res = client_config['save_train_res'])
+    
+    client = FlwrClient( model = model,
+                        xy_train = (x_train, y_train), 
+                        xy_test = (x_test, y_test),
+                        epochs=client_config['epochs'],
+                        batch_size = client_config['batch_size'],
+                        hpo = client_config['hpo'],
+                        client_name = client_name,
+                        file_path = out_file_dir,
+                        save_train_res = client_config['save_train_res'],
+                        )
     return client
 
 

@@ -1,14 +1,11 @@
 import os
-import math
-from mak.utils import set_seed
-from mak.utils import generate_config_client, parse_args, get_strategy, generate_config_simulation, get_eval_fn, gen_dir_outfile_server
-import argparse
-from mak.utils import set_seed, create_model, compile_model,get_eval_fn, fit_config
+from mak.utils import get_strategy, generate_config_simulation, get_eval_fn, gen_dir_outfile_server
+from mak.utils import save_simulation_history
+from mak.utils import create_model, compile_model,get_eval_fn, fit_config
 # Make TensorFlow logs less verbose
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 import flwr as fl
-import tensorflow as tf
 from client import generate_client
 from mak.custom_server import ServerSaveData
 
@@ -40,12 +37,10 @@ def main() -> None:
         server = server,
     )
     
-    from mak.utils import save_simulation_history
+   
     simu_data_file_path = out_file_path.replace('.csv','_metrics.csv')
     save_simulation_history(hist=hist,path = simu_data_file_path)
 
 
 if __name__ == "__main__":
-    # args = parse_args()
-    # client_config = generate_config_client(args)
     main()
