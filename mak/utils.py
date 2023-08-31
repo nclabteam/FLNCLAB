@@ -12,6 +12,7 @@ import flwr as fl
 from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
 from mak.data.cifar_10_data import Cifar10Data
+from mak.data.shakespeare import ShakespeareData
 from mak.custom_strategy.fedex_strategy import CustomFedEx
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from flwr.common import Metrics
@@ -227,7 +228,7 @@ def set_seed(seed: int = 13) -> None:
 
 
 def create_model(name,input_shape, num_classes=10):
-    # mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet
+    # mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet, lstm-shakespeare
     if name == 'mobilenetv2':
         return MobileNetV2(input_shape=input_shape,num_classes=num_classes)._model
     elif name == 'simplecnn':
@@ -246,8 +247,10 @@ def create_model(name,input_shape, num_classes=10):
         return FMCNNModel(input_shape=input_shape,num_classes=num_classes)._model
     elif name == 'resnet-18':
         return ResNet18(input_shape=input_shape,num_classes=num_classes)._model
+    elif name == 'lstm-shakespeare':
+        return LSTMModel(input_shape=input_shape,num_classes=num_classes)._model
     else:
-        print("Invalid model name. Model name must be among [ mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet]")
+        print("Invalid model name. Model name must be among [ mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,lstm-shakespeare, resnet-18]")
 
 def compile_model(model,optimizer,lr= 0.001):
     if optimizer == 'sgd':
@@ -299,6 +302,14 @@ def generate_config_simulation(c_id):
             if config['fedex']:
                 simu_config['hyperparam_config_nr'] = config['fedex']['hyperparam_config_nr']
                 simu_config['hyperparam_file'] = config['fedex']['hyperparam_file']
+
+            if config['shakespeare']:
+                simu_config['shakespeare'] ={}
+                simu_config['shakespeare']['sequence_length'] = config['shakespeare']['sequence_length']
+                simu_config['shakespeare']['vocab_size'] = config['shakespeare']['vocab_size']
+                simu_config['shakespeare']['train_file'] = config['shakespeare']['train_file']
+                simu_config['shakespeare']['test_file'] = config['shakespeare']['test_file']
+
             return simu_config
         except yaml.YAMLError as exc:
             print(exc)
@@ -312,7 +323,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
             min_fit_clients=config['min_fit_clients'],
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
-            evaluate_fn=get_eval_fn(model,dataset,num_clients),
+            evaluate_fn=get_eval_fn(model,dataset,num_clients,config),
             evaluate_metrics_aggregation_fn=agg_metrics,
             on_fit_config_fn=on_fit_config_fn,
             initial_parameters=fl.common.ndarrays_to_parameters(
@@ -330,7 +341,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
             min_fit_clients=config['min_fit_clients'],
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
-            evaluate_fn=get_eval_fn(model,dataset,num_clients),
+            evaluate_fn=get_eval_fn(model,dataset,num_clients,config),
             evaluate_metrics_aggregation_fn=agg_metrics,
             on_fit_config_fn=on_fit_config_fn,
             initial_parameters=fl.common.ndarrays_to_parameters(
@@ -346,7 +357,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
             min_fit_clients=config['min_fit_clients'],
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
-            evaluate_fn=get_eval_fn(model,dataset,num_clients),
+            evaluate_fn=get_eval_fn(model,dataset,num_clients,config),
             evaluate_metrics_aggregation_fn=agg_metrics,
             on_fit_config_fn=on_fit_config_fn,
             initial_parameters=fl.common.ndarrays_to_parameters(
@@ -361,7 +372,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
             min_fit_clients=config['min_fit_clients'],
             min_evaluate_clients=2,
             min_available_clients=config['min_avalaible_clients'],
-            evaluate_fn=get_eval_fn(model,dataset,num_clients),
+            evaluate_fn=get_eval_fn(model,dataset,num_clients,config),
             evaluate_metrics_aggregation_fn=agg_metrics,
             on_fit_config_fn=on_fit_config_fn,
             proximal_mu = 0.5,
@@ -372,7 +383,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
         strategy = CustomFedEx(
             config=config,
             fraction_fit=config['fraction_fit'],
-            eval_fn=get_eval_fn(model,dataset,num_clients),
+            eval_fn=get_eval_fn(model,dataset,num_clients,config),
             fraction_eval= config['fraction_evaluate'],
             min_fit_clients=config['min_fit_clients'],
             min_eval_clients=2,
@@ -383,7 +394,7 @@ def get_strategy(config,get_eval_fn,model,dataset,num_clients,on_fit_config_fn):
         )   
     else:
         strategy = fl.server.strategy.FedAvg(
-            evaluate_fn=get_eval_fn(model,dataset,num_clients),
+            evaluate_fn=get_eval_fn(model,dataset,num_clients,config),
             fraction_fit=config['fraction_fit'],
             fraction_evaluate= config['fraction_evaluate'],
             min_fit_clients=config['min_fit_clients'],
@@ -404,13 +415,17 @@ def agg_metrics(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     # Aggregate and return custom metric (weighted average)
     return {"accuracy": sum(accuracies) / sum(examples)}
 
-def get_eval_fn(model,dataset,num_clients):
+def get_eval_fn(model,dataset,num_clients,config):
     """Return an evaluation function for server-side evaluation."""
     # Load data and model here to avoid the overhead of doing it in `evaluate` itself
     if dataset =='mnist':
         (x_val, y_val) = MnistData(num_clients=num_clients).load_test_data()
     elif dataset == 'cifar-10':
         (x_val, y_val) = Cifar10Data(num_clients=num_clients).load_test_data()
+    elif dataset == 'shakespeare':
+        input_shape = (config['shakespeare']['sequence_length'])
+        num_classes = (config['shakespeare']['vocab_size'])
+        (x_val,y_val) = ShakespeareData(num_clients=num_clients,train_file=config['shakespeare']['train_file'],test_file=config['shakespeare']['test_file']).load_test_data()
     else:
         (x_val, y_val) = FashionMnistData(num_clients=num_clients).load_test_data()
     print("Validation x shape : {}".format(x_val.shape))
@@ -512,7 +527,4 @@ def fit_config(server_round: int):
         "round": server_round,
     }
     return config
-
-
-
 
