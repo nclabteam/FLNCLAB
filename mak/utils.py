@@ -197,6 +197,15 @@ def gen_out_file_client(config):
         last_updated_dir = dirs[-1]
     else:
         last_updated_dir ='0'
+    
+    lu_dir_path = os.path.join(BASE_DIR, str(
+        today), mode, config['strategy'], data_dist_type, str(last_updated_dir))
+
+    if not os.path.exists(lu_dir_path):
+        try:
+            os.mkdir(lu_dir_path)
+        except FileExistsError:
+            pass
     final_dir_path = os.path.join(BASE_DIR, str(
         today), mode, config['strategy'], data_dist_type, str(last_updated_dir),'clients')
 

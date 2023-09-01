@@ -13,5 +13,5 @@ distribution_history.csv
 gain_history.csv
 hyperparam-logs/
 datasets/
-*.pkl
 *.json
+*.pkl
