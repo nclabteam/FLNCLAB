@@ -6,7 +6,6 @@ from mak.utils import create_model, compile_model,get_eval_fn, fit_config
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 import flwr as fl
-from flwr.simulation.ray_transport.utils import enable_tf_gpu_growth
 from client import generate_client
 from mak.custom_server import ServerSaveData
 
@@ -35,16 +34,12 @@ def main() -> None:
     server = ServerSaveData(
         strategy=strategy, client_manager=fl.server.client_manager.SimpleClientManager(),out_file_path=out_file_path,target_acc=config['target_acc'])
     
-    my_client_resources = {'num_cpus': 1, 'num_gpus': 0.05}
-
     hist = fl.simulation.start_simulation(
         client_fn=generate_client,
         num_clients=config['min_avalaible_clients'],
         config=fl.server.ServerConfig(num_rounds=config['max_rounds']),
         strategy = strategy,
         server = server,
-        client_resources = my_client_resources,
-        actor_kwargs={"on_actor_init_fn": enable_tf_gpu_growth},
     )
     
    
