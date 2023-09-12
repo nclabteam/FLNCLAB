@@ -1,6 +1,7 @@
 out/
 saved_model/
 venv-flwr/
+venv-flwr-tff/
 *.ipynb
 plot_style.txt
 .ipynb_checkpoints
@@ -11,3 +12,6 @@ config.yaml
 distribution_history.csv
 gain_history.csv
 hyperparam-logs/
+datasets/
+*.json
+*.pkl

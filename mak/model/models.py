@@ -16,6 +16,26 @@ class Model:
         print("input size : {}  classes : {} weights : {} ".format(
             self.input_shape, self.num_classes, self.weights))
 
+class LSTMModel(Model):
+     """Create a LSTM model for next character task.
+    Args:
+        input_shape:  sequence length of your data.
+        num_classes : int the size of the vocabulary of dataset
+
+    Returns:
+        A keras model.
+
+    """
+     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
+        super().__init__(input_shape, num_classes, weights)
+        self.input_shape = input_shape
+        self.input_length = self.input_shape
+        self._model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(num_classes, 256, input_length=self.input_length),
+        tf.keras.layers.LSTM(256),
+        tf.keras.layers.Dense(num_classes, activation='softmax')
+    ])
+
 
 class MobileNetV2(Model):
     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):
@@ -39,8 +59,6 @@ class MobileNetV2(Model):
             maxpool_layer,
             prediction_layer
         ])
-
-
 
 class SimpleCNN(Model):
     def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):

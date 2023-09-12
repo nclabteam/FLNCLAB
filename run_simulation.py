@@ -15,14 +15,19 @@ def main() -> None:
     config = generate_config_simulation(c_id=-1) # c_id = -1 implies the confugration is for server
     dataset = config['dataset']
     num_clients = config['min_avalaible_clients']
-    if config['dataset'] == 'cifar-10':
+    if dataset == 'cifar-10':
         input_shape = (32, 32, 3)
+        num_classes = 10
+    elif dataset == 'shakespeare':
+        input_shape = (config['shakespeare']['sequence_length'])
+        num_classes = (config['shakespeare']['vocab_size'])
     else:
         input_shape = (28, 28, 1)
+        num_classes = 10
 
     out_file_path = gen_dir_outfile_server(config=config)
 
-    model = create_model(config['model'],input_shape=input_shape,num_classes=10)
+    model = create_model(config['model'],input_shape=input_shape,num_classes=num_classes)
     # Compile model
     compile_model(model,config['optimizer'],config['lr'])
     strategy = get_strategy(config=config,get_eval_fn=get_eval_fn,model=model,dataset=dataset,num_clients=num_clients,on_fit_config_fn=fit_config)
