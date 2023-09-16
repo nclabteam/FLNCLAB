@@ -27,8 +27,8 @@ client:
   batch_size : 64
   lr: 0.01  #[0.0001,0.001,0.005,0.01,0.1,0.2]
   save_train_res : True
-  gpu : False  # True or False, Use GPU for training or not.
-  num_cpus : 10  # no. of CPU cores that are assigned for each actor
+  gpu : false  # True or False, Use GPU for training or not.
+  num_cpus : 1  # no. of CPU cores that are assigned for each actor
   num_gpus : 0.0  # no. of GPU that are assigned for each actor (it can be fraction value as well)
 
 fedex:

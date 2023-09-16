@@ -15,15 +15,17 @@ from mak.custom_server import ServerSaveData
 def main() -> None:
     # Start Flower simulation
     config = generate_config_simulation(c_id=-1) # c_id = -1 implies the confugration is for server
+
+    if config['num_cpus'] and (config['num_gpus'] > 0.0 and config['num_gpus'] <= 1.0):
+        client_res = {'num_cpus': config['num_cpus'], 'num_gpus' : config['num_gpus']}
+    else:
+        client_res = {'num_cpus': config['num_cpus'], 'num_gpus' : 0.0}
+
     if config['gpu']:
         enable_tf_gpu_growth()
         actor_kwargs = {"on_actor_init_fn" : enable_tf_gpu_growth}
     else:
         actor_kwargs = {}
-
-    if config['num_cpus'] and (config['num_gpus'] > 0.0 and config['num_gpus'] <= 1.0):
-        client_res = {'num_cpus': config['num_cpus'], 'num_gpus' : config['num_gpus']}
-    else:
         client_res = {'num_cpus': config['num_cpus'], 'num_gpus' : 0.0}
     
     if config['multi_node']:
