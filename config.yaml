@@ -10,13 +10,15 @@ common:
   model : lstm-shakespeare #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn,resnet-18,lstm-shakespeare]
   optimizer : sgd # one among [sgd,adam]
   simulation : true
+  verbose : 1 #[0,1,2] verbosity of model training or evaluvation (0 = silent, 1 = progress bar, 2 = one line per epoch)
+  multi_node: false # use multi-node setup or not
 
 server:
   max_rounds : 11
   address : 127.0.0.1
   fraction_fit : 0.05
   min_fit_clients: 2
-  min_avalaible_clients : 200  # total number of clients participating in training 
+  min_avalaible_clients : 20  # total number of clients participating in training 
   fraction_evaluate : 0.025
   strategy : fedavg #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm','fedprox']
 
@@ -25,6 +27,9 @@ client:
   batch_size : 64
   lr: 0.01  #[0.0001,0.001,0.005,0.01,0.1,0.2]
   save_train_res : True
+  gpu : False  # True or False, Use GPU for training or not.
+  num_cpus : 10  # no. of CPU cores that are assigned for each actor
+  num_gpus : 0.0  # no. of GPU that are assigned for each actor (it can be fraction value as well)
 
 fedex:
   hyperparam_config_nr : 120 # size of hyperparameter search space
@@ -32,9 +37,9 @@ fedex:
 
 shakespeare:
   sequence_length : 100 # the length of input sequences characters
-  vocab_size : 78
-  train_file: /home/mak36/Desktop/curr_work/FedAdap_v2/shakespare_train_processed.pkl
-  test_file: /home/mak36/Desktop/curr_work/FedAdap_v2/shakespare_test_processed.pkl
+  vocab_size : 87  # check vocab size of your dataset (actual vocab size +1 )
+  train_file: path_to_shakespare_train_file
+  test_file: path_to_shakespare_test_file
 
 
 
