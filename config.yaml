@@ -37,7 +37,7 @@ fedex:
 
 shakespeare:
   sequence_length : 100 # the length of input sequences characters
-  vocab_size : 87  # check vocab size of your dataset (actual vocab size +1 )
+  vocab_size : 78  # check vocab size of your dataset (actual vocab size +1 )
   train_file: path_to_shakespare_train_file
   test_file: path_to_shakespare_test_file
 
