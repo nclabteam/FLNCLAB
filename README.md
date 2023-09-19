@@ -30,9 +30,9 @@ at https://www.tensorflow.org/install/pip
 
 7. Create a new virtual environment using conda
 ```bash
- conda env create -f environment.yml
+ conda env create -f environment.yaml
 ```
-It will create a virtual env named `venv-flwr` based on `environment.yml` file
+It will create a virtual env named `venv-flwr` based on `environment.yaml` file
 
 8. For using virtual environment we need to activate the environment first.
 ```bash

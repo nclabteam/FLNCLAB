@@ -281,7 +281,7 @@ def generate_config_simulation(c_id):
     Parameters:
     c_id (int): client id of the simulated client
     """
-    yaml_file = "config.yaml"
+    yaml_file = os.path.abspath("config.yaml")
     with open(file=yaml_file) as file:
         try:
             config = yaml.safe_load(file)   
