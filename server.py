@@ -10,7 +10,7 @@ import tensorflow as tf
 import flwr as fl
 
 import yaml
-from mak.utils import generate_config_server,gen_dir_outfile_server, get_strategy
+from mak.utils import generate_config_server,gen_dir_outfile_server, get_strategy, save_simulation_history
 from mak.utils import set_seed, create_model, compile_model,get_eval_fn, fit_config
 
 
@@ -22,13 +22,18 @@ def main() -> None:
     server_config = generate_config_server(args)
     out_file_path = gen_dir_outfile_server(config=server_config)
     dataset = server_config['dataset']
-
-    if server_config['dataset'] == 'cifar-10':
+    num_clients = server_config['min_avalaible_clients']
+    if dataset == 'cifar-10':
         input_shape = (32, 32, 3)
+        num_classes = 10
+    elif dataset == 'shakespeare':
+        input_shape = (server_config['shakespeare']['sequence_length'])
+        num_classes = (server_config['shakespeare']['vocab_size'])
     else:
         input_shape = (28, 28, 1)
+        num_classes = 10
 
-    model = create_model(server_config['model'],input_shape=input_shape,num_classes=10)
+    model = create_model(server_config['model'],input_shape=input_shape,num_classes=num_classes)
     # Compile model
     compile_model(model,server_config['optimizer'],server_config['lr'])
     num_clients = server_config['min_avalaible_clients']
@@ -40,12 +45,15 @@ def main() -> None:
   # Start Flower server for four rounds of federated learning
     server = ServerSaveData(
         strategy=strategy, client_manager=fl.server.client_manager.SimpleClientManager(),out_file_path=out_file_path,target_acc=server_config['target_acc'])
-    fl.server.start_server(
+    hist = fl.server.start_server(
         server=server,
         server_address="[::]:8080",
         config=fl.server.ServerConfig(num_rounds=server_config['max_rounds']),
         strategy=strategy
     )
+
+    simu_data_file_path = out_file_path.replace('.csv','_metrics.csv')
+    save_simulation_history(hist=hist,path = simu_data_file_path)
 
 
 if __name__ == "__main__":
