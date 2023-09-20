@@ -39,6 +39,16 @@ It will create a virtual env named `venv-flwr` based on `environment.yml` file
  conda deactivate
  conda activate venv-flwr
 ```
+8. if you intent to use GPU run these commands in terminal
+```bash
+  mkdir -p $CONDA_PREFIX/etc/conda/activate.d
+  echo 'CUDNN_PATH=$(dirname $(python -c "import nvidia.cudnn;print(nvidia.cudnn.__file__)"))' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+  echo 'export LD_LIBRARY_PATH=$CUDNN_PATH/lib:$CONDA_PREFIX/lib/:$LD_LIBRARY_PATH' >> $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
+```
+8. Then check if GPU is working or not as 
+```bash
+  python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+```
 8. We can change the confugration as per our need in config.yaml file
 
 9. We can run server and clients using provided bash scripts using saperate terminals as :
