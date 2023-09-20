@@ -46,6 +46,12 @@ def generate_config_server(args):
             if config['fedex']:
                 server_config['hyperparam_config_nr'] = config['fedex']['hyperparam_config_nr']
                 server_config['hyperparam_file'] = config['fedex']['hyperparam_file']
+            if config['shakespeare']:
+                server_config['shakespeare'] ={}
+                server_config['shakespeare']['sequence_length'] = config['shakespeare']['sequence_length']
+                server_config['shakespeare']['vocab_size'] = config['shakespeare']['vocab_size']
+                server_config['shakespeare']['train_file'] = config['shakespeare']['train_file']
+                server_config['shakespeare']['test_file'] = config['shakespeare']['test_file']
 
             return server_config
         except yaml.YAMLError as exc:
@@ -75,6 +81,10 @@ def generate_config_client(args):
             client_config['model'] = config['common']['model']
             client_config['optimizer'] = config['common']['optimizer']
             client_config['min_avalaible_clients'] = config['server']['min_avalaible_clients']
+            client_config['lr'] = config['client']['lr']
+            client_config['gpu'] = config['client']['gpu']
+            client_config['num_cpus'] = config['client']['num_cpus']
+            client_config['num_gpus'] = config['client']['num_gpus']
 
             return client_config
         except yaml.YAMLError as exc:
