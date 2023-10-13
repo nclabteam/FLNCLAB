@@ -41,6 +41,9 @@ def main() -> None:
     elif dataset == 'shakespeare':
         input_shape = (config['shakespeare']['sequence_length'])
         num_classes = (config['shakespeare']['vocab_size'])
+    elif dataset == 'violation-detection':
+        input_shape = (config['violation-detection']['image_size'],config['violation-detection']['image_size'], 3)
+        num_classes = config['violation-detection']['num_classes']
     else:
         input_shape = (28, 28, 1)
         num_classes = 10

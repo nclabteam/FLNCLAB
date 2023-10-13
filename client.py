@@ -5,6 +5,7 @@ from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
 from mak.data.cifar_10_data import Cifar10Data
 from mak.data.shakespeare import ShakespeareData
+from mak.data.violation_detection import ViolationDetection
 from mak.model.models import SimpleCNN, SimpleDNN, KerasExpCNN
 import os
 import flwr as fl
@@ -31,6 +32,9 @@ def generate_client(cid : str) -> fl.client.Client:
     elif client_config['dataset'] == 'cifar-10':
         input_shape = (32, 32, 3)
         num_classes = 10
+    elif dataset == 'violation-detection':
+        input_shape = (client_config['violation-detection']['image_size'],client_config['violation-detection']['image_size'], 3)
+        num_classes = client_config['violation-detection']['num_classes']
     else:
         input_shape = (28, 28, 1)
         num_classes = 10
@@ -44,15 +48,19 @@ def generate_client(cid : str) -> fl.client.Client:
         data = Cifar10Data(total_clients, data_type)
     elif dataset == 'shakespeare':
         data = ShakespeareData(num_clients=total_clients,train_file=client_config['shakespeare']['train_file'],test_file=client_config['shakespeare']['test_file'])
+    elif dataset == 'violation-detection':
+        data = ViolationDetection(total_clients,client_config['violation-detection']['data_root'],image_size=input_shape[:2])
     else:
         data = FashionMnistData(total_clients, data_type)
     client_name = f"client_{cid}"
 
-    print(f"Data Type : {client_config['data_type']}")
     # Load a subset of dataset to simulate the local data partition
     if dataset == 'shakespeare':
         (x_train, y_train), (x_test, y_test) = data.get_client_data(cid=client_config['partition'])
+    elif dataset == 'violation-detection':
+        (x_train, y_train), (x_test, y_test) = data.get_client_data(f"Client{cid}")
     else:
+        print(f"Data Type : {client_config['data_type']}")
         if data_type == "one-class-niid":
             print("Using One Class NoN-IID data")
             (x_train, y_train), (x_test, y_test) = data.load_data_one_class(

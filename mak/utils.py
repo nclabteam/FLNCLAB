@@ -13,6 +13,7 @@ from mak.data.fashion_mnist import FashionMnistData
 from mak.data.mnist import MnistData
 from mak.data.cifar_10_data import Cifar10Data
 from mak.data.shakespeare import ShakespeareData
+from mak.data.violation_detection import ViolationDetection
 from mak.custom_strategy.fedex_strategy import CustomFedEx
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from flwr.common import Metrics
@@ -85,6 +86,12 @@ def generate_config_client(args):
             client_config['gpu'] = config['client']['gpu']
             client_config['num_cpus'] = config['client']['num_cpus']
             client_config['num_gpus'] = config['client']['num_gpus']
+
+            if config['violation-detection']:
+                client_config['violation-detection'] ={}
+                client_config['violation-detection']['data_root'] = config['violation-detection']['data_root']
+                client_config['violation-detection']['image_size'] = config['violation-detection']['image_size']
+                client_config['violation-detection']['num_classes'] = config['violation-detection']['num_classes']
 
             return client_config
         except yaml.YAMLError as exc:
@@ -334,6 +341,12 @@ def generate_config_simulation(c_id):
                 simu_config['shakespeare']['train_file'] = config['shakespeare']['train_file']
                 simu_config['shakespeare']['test_file'] = config['shakespeare']['test_file']
 
+            if config['violation-detection']:
+                simu_config['violation-detection'] ={}
+                simu_config['violation-detection']['data_root'] = config['violation-detection']['data_root']
+                simu_config['violation-detection']['image_size'] = config['violation-detection']['image_size']
+                simu_config['violation-detection']['num_classes'] = config['violation-detection']['num_classes']
+
             return simu_config
         except yaml.YAMLError as exc:
             print(exc)
@@ -446,6 +459,8 @@ def get_eval_fn(model,dataset,num_clients,config):
         (x_val, y_val) = MnistData(num_clients=num_clients).load_test_data()
     elif dataset == 'cifar-10':
         (x_val, y_val) = Cifar10Data(num_clients=num_clients).load_test_data()
+    elif dataset == 'violation-detection':
+        (x_val, y_val) = ViolationDetection(num_clients=num_clients,data_root='/home/mak36/Desktop/curr_work/FLNCLAB/datasets/violation_detection_v2',image_size=(128,128)).load_test_data()
     elif dataset == 'shakespeare':
         input_shape = (config['shakespeare']['sequence_length'])
         num_classes = (config['shakespeare']['vocab_size'])
