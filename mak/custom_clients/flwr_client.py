@@ -62,9 +62,16 @@ class FlwrClient(fl.client.NumPyClient):
     
     def get_callbacks(self,server_round : int):
         if self.save_train_res == True:
-            self.callbacks.append(CSVLoggerWithLr(filename=self.file_path,append=True,server_round=server_round))
+            self.callbacks.append(
+                CSVLoggerWithLr(filename=self.file_path,append=True,
+                                server_round=server_round,
+                                x_test_len=len(self.x_test),
+                                x_train_len=len(self.x_train)))
         if self.hpo == True:
             log(INFO,f"+++ Running With HPO +++ Round : {server_round}")
-            self.callbacks = [es,reduce_lr,CSVLoggerWithLr(filename=self.file_path,append=True,server_round=server_round)]
+            self.callbacks = [es,reduce_lr,CSVLoggerWithLr(filename=self.file_path,append=True,
+                                server_round=server_round,
+                                x_test_len=len(self.x_test),
+                                x_train_len=len(self.x_train))]
         return self.callbacks
             

@@ -460,7 +460,9 @@ def get_eval_fn(model,dataset,num_clients,config):
     elif dataset == 'cifar-10':
         (x_val, y_val) = Cifar10Data(num_clients=num_clients).load_test_data()
     elif dataset == 'violation-detection':
-        (x_val, y_val) = ViolationDetection(num_clients=num_clients,data_root='/home/mak36/Desktop/curr_work/FLNCLAB/datasets/violation_detection_v2',image_size=(128,128)).load_test_data()
+        (x_val, y_val) = ViolationDetection(num_clients=num_clients,
+                                            data_root=config['violation-detection']['data_root'],
+                                            image_size=(config['violation-detection']['image_size'],config['violation-detection']['image_size'])).load_test_data()
     elif dataset == 'shakespeare':
         input_shape = (config['shakespeare']['sequence_length'])
         num_classes = (config['shakespeare']['vocab_size'])
