@@ -18,6 +18,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from flwr.common import Metrics
 import json
 import pandas as pd
+from scipy.sparse import csc_matrix, save_npz, load_npz, csr_matrix
+from pympler import asizeof
+
 
 def generate_config_server(args):
     yaml_file = args.config
@@ -153,7 +156,7 @@ def gen_dir_outfile_server(config):
     if not os.path.exists(out_file_path):
         with open(out_file_path, 'w', encoding='UTF8') as f:
             # create the csv writer
-            header = ["round", "accuracy", "loss", "time"]
+            header = ["round", "accuracy", "loss", "time","sent_size","original_size","recieved_size"]
             writer = csv.writer(f)
             writer.writerow(header)
             f.close()
@@ -333,6 +336,11 @@ def generate_config_simulation(c_id):
                 simu_config['shakespeare']['vocab_size'] = config['shakespeare']['vocab_size']
                 simu_config['shakespeare']['train_file'] = config['shakespeare']['train_file']
                 simu_config['shakespeare']['test_file'] = config['shakespeare']['test_file']
+
+            if config['compression']:
+                simu_config['compression'] ={}
+                simu_config['compression']['enable_compression'] = config['compression']['enable_compression']
+                simu_config['compression']['compression_threshold'] = config['compression']['compression_threshold']
 
             return simu_config
         except yaml.YAMLError as exc:
@@ -551,4 +559,22 @@ def fit_config(server_round: int):
         "round": server_round,
     }
     return config
+
+def sparsify(model, threshold):
+    for layer in model.layers:
+        if hasattr(layer, 'get_weights'):
+            weights = layer.get_weights()
+            new_weights = [np.where(np.abs(w) < threshold, 0, w) for w in weights]
+            layer.set_weights(new_weights)
+    sparse_weights = [csr_matrix(w.flatten()) for w in model.get_weights()]
+    return sparse_weights
+
+
+def desparsify(original_model, sparse_weights):
+    # print(f"Types : model : {type(original_model)} sparse weights : {type(sparse_weights)}")
+    weights_decompressed = [sw.toarray().reshape(w.shape) for sw, w in zip(sparse_weights, original_model.get_weights())]
+    return weights_decompressed
+
+def get_size_obj(obj):
+    return asizeof.asizeof(obj) / (1024 **2)
 

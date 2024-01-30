@@ -1,0 +1,1254 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Testing the concept of sparse matrix for model compression and communication reduction\n",
+    "Date : 22/01/2024\n",
+    "\n",
+    "The main idea is as follows:\n",
+    "\n",
+    "1. Train a model on a dataset untill convergence.\n",
+    "2. Test the model for metrics on test data\n",
+    "3. When the model is trained, get the weights and use concept of sparse matrix for reducing the size.\n",
+    "4. Load the sparse model and again check the matrix on test data.\n",
+    "5. Compare the metrics of two tests and also the size of two models.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Import the libaries"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2024-01-30 10:46:53.959191: I tensorflow/core/util/port.cc:110] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.\n",
+      "2024-01-30 10:46:54.393645: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.\n",
+      "To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.\n",
+      "2024-01-30 10:46:55.463922: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT\n"
+     ]
+    }
+   ],
+   "source": [
+    "import os\n",
+    "import sys\n",
+    "import tensorflow as tf\n",
+    "from mak.data.cifar_10_data import Cifar10Data\n",
+    "from keras.callbacks import EarlyStopping, ReduceLROnPlateau\n",
+    "from mak.model.models import Model, ResNet18\n",
+    "from typing import Tuple\n",
+    "from tokenize import String\n",
+    "import numpy as np\n",
+    "from sklearn.metrics import classification_report, confusion_matrix\n",
+    "import matplotlib.pyplot as plt\n",
+    "from datetime import datetime\n",
+    "import pandas as pd\n",
+    "\n",
+    "import keras  \n",
+    "from keras.models import Sequential\n",
+    "from keras.layers import Dense, Conv2D \n",
+    "from pympler import asizeof\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "OUT_DIR ='./sparse_idea_output/'\n",
+    "TEST_METRICS_FILE = os.path.join(OUT_DIR,'resnet-18_model_metrics.txt')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def get_size_obj(obj):\n",
+    "    return asizeof.asizeof(obj) / (1024 **2)\n",
+    "\n",
+    "class ResNet50(Model):\n",
+    "    def __init__(self, input_shape: Tuple, num_classes: int, weights: String = None):\n",
+    "        super().__init__(input_shape, num_classes, weights)\n",
+    "        input_tensor = tf.keras.layers.Input(shape=self.input_shape)\n",
+    "        self._model = tf.keras.applications.ResNet50(\n",
+    "            input_tensor=input_tensor, classes=self.num_classes, weights=self.weights)\n",
+    "\n",
+    "def evaluate_model(model, test_data, test_labels,out_file,cm_title):\n",
+    "    print(f\"+++++++++  {cm_title}\")\n",
+    "    print(f\"+++++++++ Test Samples : {len(test_data)}\")\n",
+    "    predictions = model.predict(test_data)\n",
+    "\n",
+    "   # Convert predictions and one-hot encoded labels to class labels\n",
+    "    predicted_labels = np.argmax(predictions, axis=1)\n",
+    "    true_labels = np.argmax(test_labels, axis=1)\n",
+    "\n",
+    "    # # Step 4: Calculate the confusion matrix and classification report\n",
+    "    cm = confusion_matrix(true_labels, predicted_labels)\n",
+    "    cr = classification_report(true_labels, predicted_labels)\n",
+    "    # print(f\"+++++++++++ {set(predicted_labels) - set(true_labels)}\")\n",
+    "    print(\"Classification Report:\\n\", cr)\n",
+    "    print(\"Confusion Matrix:\\n\", cm)\n",
+    "    with open(out_file,'a+') as out:\n",
+    "        current_datetime = datetime.now()\n",
+    "        current_datetime_str = current_datetime.strftime(\"%Y/%m/%d %H:%M:%S\")\n",
+    "        out.write(f\"++++++++++++++++{current_datetime_str}+++++++++++++++++++ \\n\")\n",
+    "        out.write(f\"Model  : {model.name} Optimizer : {model.optimizer.name} \\n\")\n",
+    "        out.writelines(\"Classification report : \\n\")\n",
+    "        out.write(cr +\"\\n\")\n",
+    "        out.writelines(\"Confusion Matrix :\\n\")\n",
+    "        cm_str = np.array2string(cm, separator=', ')\n",
+    "        out.write(cm_str)\n",
+    "        out.write(\"\\n\\n\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Load the dataset"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "x train : shape (50000, 32, 32, 3), len : 50000\n",
+      "y train : shape (50000, 10), len : 50000\n",
+      "x test : shape (10000, 32, 32, 3), len : 10000\n",
+      "y test : shape (10000, 10), len : 10000\n"
+     ]
+    }
+   ],
+   "source": [
+    "cifar_data = Cifar10Data(10)\n",
+    "x_train, y_train, x_test, y_test = cifar_data.x_train,cifar_data.y_train,cifar_data.x_test,cifar_data.y_test\n",
+    "\n",
+    "# Convert class vectors to one-hot encoded labels\n",
+    "y_train = tf.keras.utils.to_categorical(y_train, 10)\n",
+    "y_test = tf.keras.utils.to_categorical(y_test, 10)\n",
+    "\n",
+    "print(f\"x train : shape {x_train.shape}, len : {len(x_train)}\")\n",
+    "print(f\"y train : shape {y_train.shape}, len : {len(y_train)}\")\n",
+    "\n",
+    "print(f\"x test : shape {x_test.shape}, len : {len(x_test)}\")\n",
+    "print(f\"y test : shape {y_test.shape}, len : {len(y_test)}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Train the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2024-01-23 10:30:39.289667: E tensorflow/compiler/xla/stream_executor/cuda/cuda_driver.cc:268] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW\n",
+      "2024-01-23 10:30:39.289689: I tensorflow/compiler/xla/stream_executor/cuda/cuda_diagnostics.cc:168] retrieving CUDA diagnostic information for host: nclab-MS-7D30\n",
+      "2024-01-23 10:30:39.289692: I tensorflow/compiler/xla/stream_executor/cuda/cuda_diagnostics.cc:175] hostname: nclab-MS-7D30\n",
+      "2024-01-23 10:30:39.289787: I tensorflow/compiler/xla/stream_executor/cuda/cuda_diagnostics.cc:199] libcuda reported version is: 535.154.5\n",
+      "2024-01-23 10:30:39.289798: I tensorflow/compiler/xla/stream_executor/cuda/cuda_diagnostics.cc:203] kernel reported version is: 535.146.2\n",
+      "2024-01-23 10:30:39.289800: E tensorflow/compiler/xla/stream_executor/cuda/cuda_diagnostics.cc:312] kernel version 535.146.2 does not match DSO version 535.154.5 -- cannot find working devices in this configuration\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Model: \"ResNet-18\"\n",
+      "__________________________________________________________________________________________________\n",
+      " Layer (type)                Output Shape                 Param #   Connected to                  \n",
+      "==================================================================================================\n",
+      " input_1 (InputLayer)        [(None, 32, 32, 3)]          0         []                            \n",
+      "                                                                                                  \n",
+      " conv1_pad (ZeroPadding2D)   (None, 38, 38, 3)            0         ['input_1[0][0]']             \n",
+      "                                                                                                  \n",
+      " conv1 (Conv2D)              (None, 16, 16, 64)           9472      ['conv1_pad[0][0]']           \n",
+      "                                                                                                  \n",
+      " bn_conv1 (BatchNormalizati  (None, 16, 16, 64)           256       ['conv1[0][0]']               \n",
+      " on)                                                                                              \n",
+      "                                                                                                  \n",
+      " activation (Activation)     (None, 16, 16, 64)           0         ['bn_conv1[0][0]']            \n",
+      "                                                                                                  \n",
+      " pool1_pad (ZeroPadding2D)   (None, 18, 18, 64)           0         ['activation[0][0]']          \n",
+      "                                                                                                  \n",
+      " max_pooling2d (MaxPooling2  (None, 8, 8, 64)             0         ['pool1_pad[0][0]']           \n",
+      " D)                                                                                               \n",
+      "                                                                                                  \n",
+      " conv2d (Conv2D)             (None, 8, 8, 64)             36928     ['max_pooling2d[0][0]']       \n",
+      "                                                                                                  \n",
+      " batch_normalization (Batch  (None, 8, 8, 64)             256       ['conv2d[0][0]']              \n",
+      " Normalization)                                                                                   \n",
+      "                                                                                                  \n",
+      " conv2d_1 (Conv2D)           (None, 8, 8, 64)             36928     ['batch_normalization[0][0]'] \n",
+      "                                                                                                  \n",
+      " batch_normalization_1 (Bat  (None, 8, 8, 64)             256       ['conv2d_1[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " add (Add)                   (None, 8, 8, 64)             0         ['batch_normalization_1[0][0]'\n",
+      "                                                                    , 'max_pooling2d[0][0]']      \n",
+      "                                                                                                  \n",
+      " activation_1 (Activation)   (None, 8, 8, 64)             0         ['add[0][0]']                 \n",
+      "                                                                                                  \n",
+      " conv2d_2 (Conv2D)           (None, 8, 8, 64)             36928     ['activation_1[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_2 (Bat  (None, 8, 8, 64)             256       ['conv2d_2[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " conv2d_3 (Conv2D)           (None, 8, 8, 64)             36928     ['batch_normalization_2[0][0]'\n",
+      "                                                                    ]                             \n",
+      "                                                                                                  \n",
+      " batch_normalization_3 (Bat  (None, 8, 8, 64)             256       ['conv2d_3[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " add_1 (Add)                 (None, 8, 8, 64)             0         ['batch_normalization_3[0][0]'\n",
+      "                                                                    , 'activation_1[0][0]']       \n",
+      "                                                                                                  \n",
+      " activation_2 (Activation)   (None, 8, 8, 64)             0         ['add_1[0][0]']               \n",
+      "                                                                                                  \n",
+      " conv2d_4 (Conv2D)           (None, 4, 4, 128)            73856     ['activation_2[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_4 (Bat  (None, 4, 4, 128)            512       ['conv2d_4[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " conv2d_5 (Conv2D)           (None, 4, 4, 128)            147584    ['batch_normalization_4[0][0]'\n",
+      "                                                                    ]                             \n",
+      "                                                                                                  \n",
+      " conv2d_6 (Conv2D)           (None, 4, 4, 128)            8320      ['activation_2[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_5 (Bat  (None, 4, 4, 128)            512       ['conv2d_5[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " batch_normalization_6 (Bat  (None, 4, 4, 128)            512       ['conv2d_6[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " add_2 (Add)                 (None, 4, 4, 128)            0         ['batch_normalization_5[0][0]'\n",
+      "                                                                    , 'batch_normalization_6[0][0]\n",
+      "                                                                    ']                            \n",
+      "                                                                                                  \n",
+      " activation_3 (Activation)   (None, 4, 4, 128)            0         ['add_2[0][0]']               \n",
+      "                                                                                                  \n",
+      " conv2d_7 (Conv2D)           (None, 4, 4, 128)            147584    ['activation_3[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_7 (Bat  (None, 4, 4, 128)            512       ['conv2d_7[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " conv2d_8 (Conv2D)           (None, 4, 4, 128)            147584    ['batch_normalization_7[0][0]'\n",
+      "                                                                    ]                             \n",
+      "                                                                                                  \n",
+      " batch_normalization_8 (Bat  (None, 4, 4, 128)            512       ['conv2d_8[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " add_3 (Add)                 (None, 4, 4, 128)            0         ['batch_normalization_8[0][0]'\n",
+      "                                                                    , 'activation_3[0][0]']       \n",
+      "                                                                                                  \n",
+      " activation_4 (Activation)   (None, 4, 4, 128)            0         ['add_3[0][0]']               \n",
+      "                                                                                                  \n",
+      " conv2d_9 (Conv2D)           (None, 2, 2, 256)            295168    ['activation_4[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_9 (Bat  (None, 2, 2, 256)            1024      ['conv2d_9[0][0]']            \n",
+      " chNormalization)                                                                                 \n",
+      "                                                                                                  \n",
+      " conv2d_10 (Conv2D)          (None, 2, 2, 256)            590080    ['batch_normalization_9[0][0]'\n",
+      "                                                                    ]                             \n",
+      "                                                                                                  \n",
+      " conv2d_11 (Conv2D)          (None, 2, 2, 256)            33024     ['activation_4[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_10 (Ba  (None, 2, 2, 256)            1024      ['conv2d_10[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " batch_normalization_11 (Ba  (None, 2, 2, 256)            1024      ['conv2d_11[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " add_4 (Add)                 (None, 2, 2, 256)            0         ['batch_normalization_10[0][0]\n",
+      "                                                                    ',                            \n",
+      "                                                                     'batch_normalization_11[0][0]\n",
+      "                                                                    ']                            \n",
+      "                                                                                                  \n",
+      " activation_5 (Activation)   (None, 2, 2, 256)            0         ['add_4[0][0]']               \n",
+      "                                                                                                  \n",
+      " conv2d_12 (Conv2D)          (None, 2, 2, 256)            590080    ['activation_5[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_12 (Ba  (None, 2, 2, 256)            1024      ['conv2d_12[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " conv2d_13 (Conv2D)          (None, 2, 2, 256)            590080    ['batch_normalization_12[0][0]\n",
+      "                                                                    ']                            \n",
+      "                                                                                                  \n",
+      " batch_normalization_13 (Ba  (None, 2, 2, 256)            1024      ['conv2d_13[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " add_5 (Add)                 (None, 2, 2, 256)            0         ['batch_normalization_13[0][0]\n",
+      "                                                                    ',                            \n",
+      "                                                                     'activation_5[0][0]']        \n",
+      "                                                                                                  \n",
+      " activation_6 (Activation)   (None, 2, 2, 256)            0         ['add_5[0][0]']               \n",
+      "                                                                                                  \n",
+      " conv2d_14 (Conv2D)          (None, 1, 1, 512)            1180160   ['activation_6[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_14 (Ba  (None, 1, 1, 512)            2048      ['conv2d_14[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " conv2d_15 (Conv2D)          (None, 1, 1, 512)            2359808   ['batch_normalization_14[0][0]\n",
+      "                                                                    ']                            \n",
+      "                                                                                                  \n",
+      " conv2d_16 (Conv2D)          (None, 1, 1, 512)            131584    ['activation_6[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_15 (Ba  (None, 1, 1, 512)            2048      ['conv2d_15[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " batch_normalization_16 (Ba  (None, 1, 1, 512)            2048      ['conv2d_16[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " add_6 (Add)                 (None, 1, 1, 512)            0         ['batch_normalization_15[0][0]\n",
+      "                                                                    ',                            \n",
+      "                                                                     'batch_normalization_16[0][0]\n",
+      "                                                                    ']                            \n",
+      "                                                                                                  \n",
+      " activation_7 (Activation)   (None, 1, 1, 512)            0         ['add_6[0][0]']               \n",
+      "                                                                                                  \n",
+      " conv2d_17 (Conv2D)          (None, 1, 1, 512)            2359808   ['activation_7[0][0]']        \n",
+      "                                                                                                  \n",
+      " batch_normalization_17 (Ba  (None, 1, 1, 512)            2048      ['conv2d_17[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " conv2d_18 (Conv2D)          (None, 1, 1, 512)            2359808   ['batch_normalization_17[0][0]\n",
+      "                                                                    ']                            \n",
+      "                                                                                                  \n",
+      " batch_normalization_18 (Ba  (None, 1, 1, 512)            2048      ['conv2d_18[0][0]']           \n",
+      " tchNormalization)                                                                                \n",
+      "                                                                                                  \n",
+      " add_7 (Add)                 (None, 1, 1, 512)            0         ['batch_normalization_18[0][0]\n",
+      "                                                                    ',                            \n",
+      "                                                                     'activation_7[0][0]']        \n",
+      "                                                                                                  \n",
+      " activation_8 (Activation)   (None, 1, 1, 512)            0         ['add_7[0][0]']               \n",
+      "                                                                                                  \n",
+      " global_average_pooling2d (  (None, 512)                  0         ['activation_8[0][0]']        \n",
+      " GlobalAveragePooling2D)                                                                          \n",
+      "                                                                                                  \n",
+      " dense (Dense)               (None, 10)                   5130      ['global_average_pooling2d[0][\n",
+      "                                                                    0]']                          \n",
+      "                                                                                                  \n",
+      "==================================================================================================\n",
+      "Total params: 11196042 (42.71 MB)\n",
+      "Trainable params: 11186442 (42.67 MB)\n",
+      "Non-trainable params: 9600 (37.50 KB)\n",
+      "__________________________________________________________________________________________________\n"
+     ]
+    }
+   ],
+   "source": [
+    "resnet18 = ResNet18(input_shape=(32,32,3),num_classes=10)._model\n",
+    "resnet18.summary()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Train the resnet18 model on cifar-10 data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "opt = tf.keras.optimizers.Adam()\n",
+    "resnet18.compile(\n",
+    "    optimizer=opt,\n",
+    "    loss=tf.keras.losses.categorical_crossentropy,\n",
+    "    metrics=[\"accuracy\"],\n",
+    "    run_eagerly=True,\n",
+    ")\n",
+    "\n",
+    "early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)\n",
+    "\n",
+    "lr_reduction = ReduceLROnPlateau(monitor='val_loss',  \n",
+    "                                 factor=0.2,\n",
+    "                                 patience=2, \n",
+    "                                 min_lr=0.0001)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "resnet_history = resnet18.fit(x_train, y_train, \n",
+    "          validation_split=0.20,\n",
+    "          epochs=111, \n",
+    "          batch_size=32,\n",
+    "          callbacks=[early_stopping])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "ename": "NameError",
+     "evalue": "name 'resnet18' is not defined",
+     "output_type": "error",
+     "traceback": [
+      "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+      "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+      "Cell \u001b[0;32mIn[5], line 2\u001b[0m\n\u001b[1;32m      1\u001b[0m \u001b[38;5;66;03m## size of trained model after training\u001b[39;00m\n\u001b[0;32m----> 2\u001b[0m \u001b[38;5;28mprint\u001b[39m(\u001b[38;5;124mf\u001b[39m\u001b[38;5;124m\"\u001b[39m\u001b[38;5;124mModel weights size (MB): \u001b[39m\u001b[38;5;132;01m{\u001b[39;00mget_size_obj(resnet18\u001b[38;5;241m.\u001b[39mget_weights())\u001b[38;5;132;01m}\u001b[39;00m\u001b[38;5;124m\"\u001b[39m)\n",
+      "\u001b[0;31mNameError\u001b[0m: name 'resnet18' is not defined"
+     ]
+    }
+   ],
+   "source": [
+    "## size of trained model after training\n",
+    "print(f\"Model weights size (MB): {get_size_obj(resnet18.get_weights())}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#save model\n",
+    "resnet18.save(os.path.join(OUT_DIR,'resnet-18_model'))\n",
+    "\n",
+    "#save history\n",
+    "hist_df = pd.DataFrame(resnet_history.history)  \n",
+    "hist_df.to_csv(os.path.join(OUT_DIR,'resnet-18_history.csv'))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Test model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2024-01-29 15:17:48.642583: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.840009: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.840128: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.841352: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.841439: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.841486: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.889010: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.889136: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.889186: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-29 15:17:48.889235: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1639] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 22110 MB memory:  -> device: 0, name: NVIDIA GeForce RTX 3090, pci bus id: 0000:01:00.0, compute capability: 8.6\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+++++++++   +++++ Metrics of original trained  resnet -18\n",
+      "+++++++++ Test Samples : 10000\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2024-01-29 15:17:50.734140: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:432] Loaded cuDNN version 8600\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " 28/313 [=>............................] - ETA: 0s  "
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2024-01-29 15:17:51.384788: I tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:606] TensorFloat-32 will be used for the matrix multiplication. This will only be logged once.\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "313/313 [==============================] - 2s 2ms/step\n",
+      "Classification Report:\n",
+      "               precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.76      0.76      0.76      1000\n",
+      "           1       0.84      0.85      0.85      1000\n",
+      "           2       0.66      0.64      0.65      1000\n",
+      "           3       0.64      0.49      0.55      1000\n",
+      "           4       0.67      0.68      0.67      1000\n",
+      "           5       0.75      0.49      0.59      1000\n",
+      "           6       0.61      0.90      0.73      1000\n",
+      "           7       0.72      0.82      0.76      1000\n",
+      "           8       0.87      0.83      0.85      1000\n",
+      "           9       0.77      0.80      0.79      1000\n",
+      "\n",
+      "    accuracy                           0.72     10000\n",
+      "   macro avg       0.73      0.72      0.72     10000\n",
+      "weighted avg       0.73      0.72      0.72     10000\n",
+      "\n",
+      "Confusion Matrix:\n",
+      " [[757  21  59  12  31   0  23  11  52  34]\n",
+      " [ 17 853   6   5   4   2  14   5  14  80]\n",
+      " [ 56   8 638  35  75  35  89  48   4  12]\n",
+      " [ 24   9  69 491  79  87 146  58  12  25]\n",
+      " [ 13   3  50  27 675   8 139  75   4   6]\n",
+      " [ 11   2  61 145  65 489 105  96   9  17]\n",
+      " [  6   5  29  14  18   9 895  13   5   6]\n",
+      " [ 12   7  26  27  46  17  26 816   2  21]\n",
+      " [ 58  23  19   6   8   3  12   8 830  33]\n",
+      " [ 43  87   7  10   3   3  12  11  23 801]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "# test original trained model\n",
+    "resnet18 = tf.keras.models.load_model(os.path.join(OUT_DIR,'resnet-18_model'))\n",
+    "evaluate_model(model=resnet18,test_data=x_test,test_labels=y_test,out_file=TEST_METRICS_FILE,cm_title=\" +++++ Metrics of original trained  resnet -18\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Model weights size (MB): 42.724517822265625\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(f\"Model weights size (MB): {get_size_obj(resnet18.get_weights())}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### sparsify the model to reduce the size"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Total zero weights before: 1.0\n",
+      "Total non-zero weights before: 11196041.0\n",
+      "Total zero weights after: 9213395.0\n",
+      "Total non-zero weights after: 1982647.0\n",
+      "Percentage change in non-zero weights: 82.29%\n",
+      "+++++++++  ++++ pruened model with threshold 0.055\n",
+      "+++++++++ Test Samples : 10000\n",
+      "313/313 [==============================] - 3s 9ms/step\n",
+      "Classification Report:\n",
+      "               precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.76      0.71      0.73      1000\n",
+      "           1       0.88      0.77      0.82      1000\n",
+      "           2       0.58      0.65      0.61      1000\n",
+      "           3       0.64      0.47      0.55      1000\n",
+      "           4       0.63      0.73      0.68      1000\n",
+      "           5       0.74      0.48      0.58      1000\n",
+      "           6       0.66      0.86      0.75      1000\n",
+      "           7       0.72      0.80      0.76      1000\n",
+      "           8       0.84      0.84      0.84      1000\n",
+      "           9       0.72      0.82      0.77      1000\n",
+      "\n",
+      "    accuracy                           0.71     10000\n",
+      "   macro avg       0.72      0.71      0.71     10000\n",
+      "weighted avg       0.72      0.71      0.71     10000\n",
+      "\n",
+      "Confusion Matrix:\n",
+      " [[706  10  95   9  44   2  21  12  58  43]\n",
+      " [ 30 768  11   2   3   4  15   5  36 126]\n",
+      " [ 43   7 649  28  89  40  82  43   5  14]\n",
+      " [ 21   5  96 475 102  81 124  53   9  34]\n",
+      " [  9   4  62  23 728   6  88  69   6   5]\n",
+      " [  8   1  88 144  77 478  74 104   9  17]\n",
+      " [  3   0  43  12  30   9 864  14   6  19]\n",
+      " [  9   6  37  27  59  16  16 804   1  25]\n",
+      " [ 56  10  22   7  10   4  14   7 843  27]\n",
+      " [ 49  61   9  10   6   6   8  10  25 816]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Set a threshold for weights\n",
+    "threshold = 0.055\n",
+    "\n",
+    "#load the model \n",
+    "model = tf.keras.models.load_model(os.path.join(OUT_DIR,'resnet-18_model'))\n",
+    "\n",
+    "# Function to calculate the number of zero and non-zero weights in a layer\n",
+    "def count_zeros_non_zeros(weights):\n",
+    "    num_zeros = np.sum([np.sum(np.abs(w) < 1e-10) for w in weights])\n",
+    "    num_non_zeros = np.sum([np.sum(np.abs(w) >= 1e-10) for w in weights])\n",
+    "    return num_zeros, num_non_zeros\n",
+    "\n",
+    "# Function to set weights below a threshold to zero and count zero/non-zero weights\n",
+    "def set_weights_and_count_zeros_non_zeros(layer, threshold):\n",
+    "    if hasattr(layer, 'get_weights'):\n",
+    "        weights = layer.get_weights()\n",
+    "        zeros_before, non_zeros_before = count_zeros_non_zeros(weights)\n",
+    "        new_weights = [np.where(np.abs(w) < threshold, 0, w) for w in weights]\n",
+    "        zeros_after, non_zeros_after = count_zeros_non_zeros(new_weights)\n",
+    "        layer.set_weights(new_weights)\n",
+    "        return zeros_before, non_zeros_before, zeros_after, non_zeros_after\n",
+    "    return 0, 0, 0, 0\n",
+    "\n",
+    "\n",
+    "\n",
+    "# Variables to store total zero and non-zero weights before and after\n",
+    "total_zeros_before = 0\n",
+    "total_non_zeros_before = 0\n",
+    "total_zeros_after = 0\n",
+    "total_non_zeros_after = 0\n",
+    "\n",
+    "# Iterate through each layer, update weights, and count zero/non-zero weights\n",
+    "for layer in model.layers:\n",
+    "    zeros_before, non_zeros_before, zeros_after, non_zeros_after = set_weights_and_count_zeros_non_zeros(layer, threshold)\n",
+    "    total_zeros_before += zeros_before\n",
+    "    total_non_zeros_before += non_zeros_before\n",
+    "    total_zeros_after += zeros_after\n",
+    "    total_non_zeros_after += non_zeros_after\n",
+    "\n",
+    "\n",
+    "# Print the results\n",
+    "print(f\"Total zero weights before: {total_zeros_before}\")\n",
+    "print(f\"Total non-zero weights before: {total_non_zeros_before}\")\n",
+    "print(f\"Total zero weights after: {total_zeros_after}\")\n",
+    "print(f\"Total non-zero weights after: {total_non_zeros_after}\")\n",
+    "\n",
+    "percentage_change_non_zeros = -((total_non_zeros_after - total_non_zeros_before) / total_non_zeros_before) * 100\n",
+    "\n",
+    "print(f\"Percentage change in non-zero weights: {percentage_change_non_zeros:.2f}%\")\n",
+    "\n",
+    "evaluate_model(model=model,\n",
+    "test_data=x_test,test_labels=y_test,out_file=TEST_METRICS_FILE,cm_title=\"++++ pruened model with threshold {}\".format(threshold))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from scipy.sparse import csc_matrix, save_npz, load_npz, csr_matrix\n",
+    "\n",
+    "def sparsify_weights(original_weights):\n",
+    "    # Step 3: Convert the weight matrices to sparse matrices\n",
+    "    # sparse_weights = [csc_matrix(w.reshape(-1, 1)) for w in original_weights]\n",
+    "    sparse_weights = [csr_matrix(w.flatten()) for w in original_weights]\n",
+    "\n",
+    "    return sparse_weights\n",
+    "\n",
+    "sparse_weights = sparsify_weights(model.get_weights())\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original Model weights size (MB): 42.724517822265625\n",
+      "Sparse Model weights size (MB): 15.234672546386719\n",
+      "Percentage Change: 64.34208430446637%\n"
+     ]
+    }
+   ],
+   "source": [
+    "\n",
+    "original_size = get_size_obj(model.get_weights())\n",
+    "\n",
+    "# Assuming sparse_weights is the sparse representation of the weights\n",
+    "sparse_size = get_size_obj(sparse_weights)\n",
+    "\n",
+    "percentage_change = -((sparse_size - original_size) / original_size) * 100\n",
+    "\n",
+    "print(f\"Original Model weights size (MB): {original_size}\")\n",
+    "print(f\"Sparse Model weights size (MB): {sparse_size}\")\n",
+    "print(f\"Percentage Change: {percentage_change}%\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Set the sparse weights to the model\n",
+    "weights = model.get_weights()\n",
+    "sparse_weights_new = [sw.toarray().reshape(w.shape) for sw, w in zip(sparse_weights, weights)]\n",
+    "model.set_weights(sparse_weights_new)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+++++++++  ++++ test after reconstruction from compressed sparse matrix\n",
+      "+++++++++ Test Samples : 10000\n",
+      "313/313 [==============================] - 3s 9ms/step\n",
+      "Classification Report:\n",
+      "               precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.76      0.71      0.73      1000\n",
+      "           1       0.88      0.77      0.82      1000\n",
+      "           2       0.58      0.65      0.61      1000\n",
+      "           3       0.64      0.47      0.55      1000\n",
+      "           4       0.63      0.73      0.68      1000\n",
+      "           5       0.74      0.48      0.58      1000\n",
+      "           6       0.66      0.86      0.75      1000\n",
+      "           7       0.72      0.80      0.76      1000\n",
+      "           8       0.84      0.84      0.84      1000\n",
+      "           9       0.72      0.82      0.77      1000\n",
+      "\n",
+      "    accuracy                           0.71     10000\n",
+      "   macro avg       0.72      0.71      0.71     10000\n",
+      "weighted avg       0.72      0.71      0.71     10000\n",
+      "\n",
+      "Confusion Matrix:\n",
+      " [[706  10  95   9  44   2  21  12  58  43]\n",
+      " [ 30 768  11   2   3   4  15   5  36 126]\n",
+      " [ 43   7 649  28  89  40  82  43   5  14]\n",
+      " [ 21   5  96 475 102  81 124  53   9  34]\n",
+      " [  9   4  62  23 728   6  88  69   6   5]\n",
+      " [  8   1  88 144  77 478  74 104   9  17]\n",
+      " [  3   0  43  12  30   9 864  14   6  19]\n",
+      " [  9   6  37  27  59  16  16 804   1  25]\n",
+      " [ 56  10  22   7  10   4  14   7 843  27]\n",
+      " [ 49  61   9  10   6   6   8  10  25 816]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "evaluate_model(model=model,\n",
+    "test_data=x_test,test_labels=y_test,out_file=TEST_METRICS_FILE,cm_title=\"++++ test after reconstruction from compressed sparse matrix\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### test using functions"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+++++++++  ++++ fresh loaded model\n",
+      "+++++++++ Test Samples : 10000\n",
+      "313/313 [==============================] - 3s 9ms/step\n",
+      "Classification Report:\n",
+      "               precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.76      0.76      0.76      1000\n",
+      "           1       0.84      0.85      0.85      1000\n",
+      "           2       0.66      0.64      0.65      1000\n",
+      "           3       0.64      0.49      0.55      1000\n",
+      "           4       0.67      0.68      0.67      1000\n",
+      "           5       0.75      0.49      0.59      1000\n",
+      "           6       0.61      0.90      0.73      1000\n",
+      "           7       0.72      0.82      0.76      1000\n",
+      "           8       0.87      0.83      0.85      1000\n",
+      "           9       0.77      0.80      0.79      1000\n",
+      "\n",
+      "    accuracy                           0.72     10000\n",
+      "   macro avg       0.73      0.72      0.72     10000\n",
+      "weighted avg       0.73      0.72      0.72     10000\n",
+      "\n",
+      "Confusion Matrix:\n",
+      " [[757  21  59  12  31   0  23  11  52  34]\n",
+      " [ 17 853   6   5   4   2  14   5  14  80]\n",
+      " [ 56   8 638  35  75  35  89  48   4  12]\n",
+      " [ 24   9  69 491  79  87 146  58  12  25]\n",
+      " [ 13   3  50  27 675   8 139  75   4   6]\n",
+      " [ 11   2  61 145  65 489 105  96   9  17]\n",
+      " [  6   5  29  14  18   9 895  13   5   6]\n",
+      " [ 12   7  26  27  46  17  26 816   2  21]\n",
+      " [ 58  23  19   6   8   3  12   8 830  33]\n",
+      " [ 43  87   7  10   3   3  12  11  23 801]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Set a threshold for weights\n",
+    "threshold = 0.055\n",
+    "\n",
+    "#load the model \n",
+    "model = tf.keras.models.load_model(os.path.join(OUT_DIR,'resnet-18_model'))\n",
+    "evaluate_model(model=model,\n",
+    "test_data=x_test,test_labels=y_test,out_file=TEST_METRICS_FILE,cm_title=\"++++ fresh loaded model\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original weights size : 42.724517822265625\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(f\"Original weights size : {get_size_obj(model.get_weights())}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from mak.utils import sparsify, desparsify\n",
+    "\n",
+    "# sparsed_weights = sparsify(model=model,threshold=threshold)\n",
+    "\n",
+    "# print(f\"sparsed weights size : {get_size_obj(sparsed_weights)}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Types : model : <class 'keras.src.engine.functional.Functional'> sparse weights : <class 'list'>\n",
+      "Desparsed weights size : 42.739410400390625\n"
+     ]
+    }
+   ],
+   "source": [
+    "desparsed_weights = desparsify(original_model=model,sparse_weights=sparsed_weights)\n",
+    "print(f\"Desparsed weights size : {get_size_obj(desparsed_weights)}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+++++++++  ++++ Metrics after compression and loading\n",
+      "+++++++++ Test Samples : 10000\n",
+      "313/313 [==============================] - 3s 9ms/step\n",
+      "Classification Report:\n",
+      "               precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.76      0.71      0.73      1000\n",
+      "           1       0.88      0.77      0.82      1000\n",
+      "           2       0.58      0.65      0.61      1000\n",
+      "           3       0.64      0.47      0.55      1000\n",
+      "           4       0.63      0.73      0.68      1000\n",
+      "           5       0.74      0.48      0.58      1000\n",
+      "           6       0.66      0.86      0.75      1000\n",
+      "           7       0.72      0.80      0.76      1000\n",
+      "           8       0.84      0.84      0.84      1000\n",
+      "           9       0.72      0.82      0.77      1000\n",
+      "\n",
+      "    accuracy                           0.71     10000\n",
+      "   macro avg       0.72      0.71      0.71     10000\n",
+      "weighted avg       0.72      0.71      0.71     10000\n",
+      "\n",
+      "Confusion Matrix:\n",
+      " [[706  10  95   9  44   2  21  12  58  43]\n",
+      " [ 30 768  11   2   3   4  15   5  36 126]\n",
+      " [ 43   7 649  28  89  40  82  43   5  14]\n",
+      " [ 21   5  96 475 102  81 124  53   9  34]\n",
+      " [  9   4  62  23 728   6  88  69   6   5]\n",
+      " [  8   1  88 144  77 478  74 104   9  17]\n",
+      " [  3   0  43  12  30   9 864  14   6  19]\n",
+      " [  9   6  37  27  59  16  16 804   1  25]\n",
+      " [ 56  10  22   7  10   4  14   7 843  27]\n",
+      " [ 49  61   9  10   6   6   8  10  25 816]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "#load desparsed weights\n",
+    "model.set_weights(desparsed_weights)\n",
+    "\n",
+    "evaluate_model(model=model,\n",
+    "test_data=x_test,test_labels=y_test,out_file=TEST_METRICS_FILE,cm_title=\"++++ Metrics after compression and loading\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### flower ndarrays_to_parameters test"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = tf.keras.models.load_model(os.path.join(OUT_DIR,'resnet-18_model'))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SIze of weights : 42.724517822265625 Type of weights : <class 'list'>\n"
+     ]
+    }
+   ],
+   "source": [
+    "weights = model.get_weights()\n",
+    "print(f\"SIze of weights : {get_size_obj(weights)} Type of weights : {type(weights)}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SIze of flwr_params : 42.73040771484375 Type of flwr_params : <class 'flwr.common.typing.Parameters'>\n"
+     ]
+    }
+   ],
+   "source": [
+    "from flwr.common import Parameters, ndarrays_to_parameters, parameters_to_ndarrays\n",
+    "\n",
+    "flwr_params = ndarrays_to_parameters(weights)\n",
+    "\n",
+    "print(f\"SIze of flwr_params : {get_size_obj(flwr_params)} Type of flwr_params : {type(flwr_params)}\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SIze of flwr_params : 42.724517822265625 Type of flwr_params : <class 'list'>\n"
+     ]
+    }
+   ],
+   "source": [
+    "weights_back = parameters_to_ndarrays(flwr_params)\n",
+    "\n",
+    "print(f\"SIze of flwr_params : {get_size_obj(weights_back)} Type of flwr_params : {type(weights_back)}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "SIze of fsparsed w3eights : 15.234672546386719 Type of flwr_params : <class 'list'>\n"
+     ]
+    }
+   ],
+   "source": [
+    "sparsed_weights = sparsify(model=model,threshold=0.055)\n",
+    "print(f\"SIze of fsparsed w3eights : {get_size_obj(sparsed_weights)} Type of flwr_params : {type(sparsed_weights)}\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Types : model : <class 'keras.src.engine.functional.Functional'> sparse weights : <class 'list'>\n",
+      "SIze of desparsed w3eights : 42.739410400390625 Type of flwr_params : <class 'list'>\n"
+     ]
+    }
+   ],
+   "source": [
+    "desparsed_weights = desparsify(original_model=model,sparse_weights=sparsed_weights)\n",
+    "print(f\"SIze of desparsed w3eights : {get_size_obj(desparsed_weights)} Type of flwr_params : {type(desparsed_weights)}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": []
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Test saved models"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2024-01-30 10:48:31.951630: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.158178: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.158305: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.159542: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.159618: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.159662: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.219283: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.219422: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.219474: I tensorflow/compiler/xla/stream_executor/cuda/cuda_gpu_executor.cc:995] successful NUMA node read from SysFS had negative value (-1), but there must be at least one NUMA node, so returning NUMA node zero. See more at https://github.com/torvalds/linux/blob/v6.0/Documentation/ABI/testing/sysfs-bus-pci#L344-L355\n",
+      "2024-01-30 10:48:32.219522: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1639] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 22108 MB memory:  -> device: 0, name: NVIDIA GeForce RTX 3090, pci bus id: 0000:01:00.0, compute capability: 8.6\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+++++++++   +++++ Metrics of uncompressed  resnet -18\n",
+      "+++++++++ Test Samples : 10000\n"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2024-01-30 10:48:33.813419: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:432] Loaded cuDNN version 8600\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      " 39/313 [==>...........................] - ETA: 1s"
+     ]
+    },
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2024-01-30 10:48:34.593339: I tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:606] TensorFloat-32 will be used for the matrix multiplication. This will only be logged once.\n"
+     ]
+    },
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "313/313 [==============================] - 2s 3ms/step\n",
+      "Classification Report:\n",
+      "               precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.60      0.64      0.62      1000\n",
+      "           1       0.65      0.65      0.65      1000\n",
+      "           2       0.42      0.37      0.39      1000\n",
+      "           3       0.38      0.36      0.37      1000\n",
+      "           4       0.48      0.49      0.49      1000\n",
+      "           5       0.47      0.47      0.47      1000\n",
+      "           6       0.61      0.67      0.64      1000\n",
+      "           7       0.60      0.62      0.61      1000\n",
+      "           8       0.64      0.65      0.64      1000\n",
+      "           9       0.59      0.57      0.58      1000\n",
+      "\n",
+      "    accuracy                           0.55     10000\n",
+      "   macro avg       0.54      0.55      0.55     10000\n",
+      "weighted avg       0.54      0.55      0.55     10000\n",
+      "\n",
+      "Confusion Matrix:\n",
+      " [[637  38  51  26  26  17  21  19 120  45]\n",
+      " [ 45 648  15  29  14   6  16  15  65 147]\n",
+      " [ 82  15 369  78 150 105  90  66  27  18]\n",
+      " [ 28  17 101 362  81 193 104  62  23  29]\n",
+      " [ 34  15 107  72 493  55  95  97  20  12]\n",
+      " [ 19   9  83 184  73 466  46  86  21  13]\n",
+      " [ 13  13  61  79  78  41 668  21  10  16]\n",
+      " [ 27   9  40  72  77  85  20 618   9  43]\n",
+      " [124  66  21  19  20  14   9  15 647  65]\n",
+      " [ 51 171  21  34   9  18  26  37  67 566]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "\n",
+    "#uncompressed model\n",
+    "uncompressed_model = tf.keras.models.load_model('/home/nclab/MAK/FLNCLAB/out/2024-01-29/nhpo/fedavg/iid/uncompressed/saved_model')\n",
+    "evaluate_model(model=uncompressed_model,test_data=x_test,test_labels=y_test,out_file='./compressed_uncompressed_comparision.txt',cm_title=\" +++++ Metrics of uncompressed  resnet -18\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "+++++++++   +++++ Metrics of compressed 0.03 resnet -18\n",
+      "+++++++++ Test Samples : 10000\n",
+      "313/313 [==============================] - 1s 2ms/step\n",
+      "Classification Report:\n",
+      "               precision    recall  f1-score   support\n",
+      "\n",
+      "           0       0.40      0.48      0.44      1000\n",
+      "           1       0.29      0.68      0.40      1000\n",
+      "           2       0.47      0.14      0.22      1000\n",
+      "           3       0.27      0.09      0.13      1000\n",
+      "           4       0.50      0.21      0.30      1000\n",
+      "           5       0.40      0.22      0.29      1000\n",
+      "           6       0.51      0.37      0.43      1000\n",
+      "           7       0.41      0.28      0.34      1000\n",
+      "           8       0.57      0.33      0.42      1000\n",
+      "           9       0.21      0.61      0.31      1000\n",
+      "\n",
+      "    accuracy                           0.34     10000\n",
+      "   macro avg       0.40      0.34      0.33     10000\n",
+      "weighted avg       0.40      0.34      0.33     10000\n",
+      "\n",
+      "Confusion Matrix:\n",
+      " [[483 149  12  13   6   6   8  14  81 228]\n",
+      " [ 31 678   5   0   2   1   6   0  10 267]\n",
+      " [153 127 143  55  68  79  77  68  34 196]\n",
+      " [ 86 204  23  85  46 118  82  52  28 276]\n",
+      " [ 93 123  47  32 212  49 111 107  35 191]\n",
+      " [ 58 123  30  73  23 224  43 130  30 266]\n",
+      " [ 48 187  18  33  34  32 367  32  12 237]\n",
+      " [ 75 145  21  15  23  39  17 285  14 366]\n",
+      " [135 291   4   5   3   5   2   6 334 215]\n",
+      " [ 48 323   2   0   3   1   6   3   8 606]]\n"
+     ]
+    }
+   ],
+   "source": [
+    "#compressed model\n",
+    "\n",
+    "compressed_model = tf.keras.models.load_model('/home/nclab/MAK/FLNCLAB/out/2024-01-26/nhpo/fedavg/iid/compressed_0_03/saved_model')\n",
+    "evaluate_model(model=compressed_model,test_data=x_test,test_labels=y_test,out_file='./compressed_uncompressed_comparision.txt',cm_title=\" +++++ Metrics of compressed 0.03 resnet -18\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "venv-flwr",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.17"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

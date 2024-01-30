@@ -4,31 +4,31 @@
 common:
   data_type : iid #data_type = data distribution one among ['iid','one-class-niid','one-class-niid-majority','two-class-niid','dirichlet-niid']
   hpo : false #hpo = Hyperparameter optimisation true or false
-  dataset : shakespeare #data_set = data set used  one among [fashionmnist,mnist,cifar-10,shakespeare ]
+  dataset : cifar-10 #data_set = data set used  one among [fashionmnist,mnist,cifar-10,shakespeare ]
   dirichlet_alpha : 0.11 #dirichlet concentration parameter
-  target_acc : 0.80
-  model : lstm-shakespeare #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn,resnet-18,lstm-shakespeare]
+  target_acc : 0.91
+  model : resnet-18 #one among [mobilenetv2, simplecnn, simplednn, kerasexpcnn, mnistcnn,efficientnet,fedavgcnn,fmcnn,resnet-18,lstm-shakespeare]
   optimizer : sgd # one among [sgd,adam]
   simulation : true
   verbose : 1 #[0,1,2] verbosity of model training or evaluvation (0 = silent, 1 = progress bar, 2 = one line per epoch)
   multi_node: false # use multi-node setup or not
 
 server:
-  max_rounds : 11
+  max_rounds : 200
   address : 127.0.0.1
   fraction_fit : 0.05
   min_fit_clients: 2
-  min_avalaible_clients : 20  # total number of clients participating in training 
+  min_avalaible_clients : 200  # total number of clients participating in training 
   fraction_evaluate : 0.025
   strategy : fedavg #Strategy : choices=['fedavg', 'fedyogi', 'fedadagrad', 'fedavgm','fedprox']
 
 client:
-  epochs : 1
-  batch_size : 64
-  lr: 0.01  #[0.0001,0.001,0.005,0.01,0.1,0.2]
+  epochs : 2
+  batch_size : 32
+  lr: 0.001  #[0.0001,0.001,0.005,0.01,0.1,0.2]
   save_train_res : True
   gpu : false  # True or False, Use GPU for training or not.
-  num_cpus : 1  # no. of CPU cores that are assigned for each actor
+  num_cpus : 2  # no. of CPU cores that are assigned for each actor
   num_gpus : 0.0  # no. of GPU that are assigned for each actor (it can be fraction value as well)
 
 fedex:
@@ -38,8 +38,12 @@ fedex:
 shakespeare:
   sequence_length : 100 # the length of input sequences characters
   vocab_size : 78  # check vocab size of your dataset (actual vocab size +1 )
-  train_file: path_to_shakespare_train_file
-  test_file: path_to_shakespare_test_file
+  train_file: /home/nclab/MAK/FLNCLAB/datasets/shakespeare/shakespare_train_processed.pkl
+  test_file: /home/nclab/MAK/FLNCLAB/datasets/shakespeare/shakespare_test_processed.pkl
+
+compression:
+  enable_compression : True
+  compression_threshold : 0.01
 
 
 

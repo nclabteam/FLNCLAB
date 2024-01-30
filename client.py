@@ -105,6 +105,8 @@ def generate_client(cid : str) -> fl.client.Client:
                             client_name = client_name,
                             file_path = out_file_dir,
                             save_train_res = client_config['save_train_res'],
+                            compression_threshold = client_config['compression']['compression_threshold'],
+                            enable_compression = client_config['compression']['enable_compression']
                             )
     return client
 

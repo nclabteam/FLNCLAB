@@ -39,6 +39,9 @@ from flwr.server.client_proxy import ClientProxy
 from flwr.server.history import History
 from flwr.server.strategy import FedAvg, Strategy
 
+from mak.utils import get_size_obj, sparsify, desparsify
+import tensorflow as tf
+from flwr.common import parameters_to_ndarrays, ndarrays_to_parameters
 
 FitResultsAndFailures = Tuple[
     List[Tuple[ClientProxy, FitRes]],
@@ -91,7 +94,7 @@ class ServerSaveData:
         # Initialize parameters
         log(INFO, "Initializing global parameters")
         self.parameters = self._get_initial_parameters(timeout=timeout)
-        log(INFO, "Evaluating initial parameters")
+        log(INFO, f"Evaluating initial parameters  ({get_size_obj(self.parameters)} type : {type(self.parameters)})")
         res = self.strategy.evaluate(0,parameters=self.parameters)
         if res is not None:
             log(
@@ -113,10 +116,17 @@ class ServerSaveData:
             curr_round_start_time = timeit.default_timer()
             res_fit = self.fit_round(server_round=current_round, timeout=timeout)
             if res_fit:
-                parameters_prime, _, _ = res_fit  # fit_metrics_aggregated
+                parameters_prime, _, results_and_failures = res_fit  # fit_metrics_aggregated
                 if parameters_prime:
                     self.parameters = parameters_prime
+                if results_and_failures:
+                    sent_size_sum = sum(fit_res.metrics['size_sent'] for _, fit_res in results_and_failures[0])
+                    original_size_sum = sum(fit_res.metrics['original_size'] for _, fit_res in results_and_failures[0])
+                    size_recieved_sum = sum(fit_res.metrics['size_recieved'] for _, fit_res in results_and_failures[0])
+                    
 
+                    
+                   
             # Evaluate model using strategy implementation
             res_cen = self.strategy.evaluate(current_round,parameters=self.parameters)
             if res_cen is not None:
@@ -147,8 +157,9 @@ class ServerSaveData:
             acc = acc['accuracy'] if acc is not None else None
             print("Accuracy ",acc)
             if self.out_file_path is not None:
-                field_names = ["round","accuracy","loss","time"]
-                dict = {"round": current_round,"accuracy":acc,"loss":loss,"time":timeit.default_timer()-curr_round_start_time}
+                field_names = ["round", "accuracy", "loss", "time","sent_size","original_size","recieved_size"]
+                dict = {"round": current_round,"accuracy":acc,"loss":loss,"time":timeit.default_timer()-curr_round_start_time,
+                        "sent_size" : sent_size_sum,"original_size" : original_size_sum, "recieved_size" : size_recieved_sum}
                 with open(self.out_file_path,'a') as f:
                     dictwriter_object = csv.DictWriter(f, fieldnames=field_names)
                     dictwriter_object.writerow(dict)
@@ -216,7 +227,7 @@ class ServerSaveData:
         Tuple[Optional[Parameters], Dict[str, Scalar], FitResultsAndFailures]
     ]:
         """Perform a single round of federated averaging."""
-
+        # log(INFO, f"MAK :inside fit round ")
         # Get clients and their respective instructions from strategy
         client_instructions = self.strategy.configure_fit(
             server_round=server_round, parameters=self.parameters, client_manager=self._client_manager
@@ -349,6 +360,7 @@ def fit_clients(
     for future in finished_fs:
         failure = future.exception()
         if failure is not None:
+            print(f" failure ++++ : {failure}")
             failures.append(failure)
         else:
             # Success case
@@ -362,6 +374,20 @@ def fit_client(
 ) -> Tuple[ClientProxy, FitRes]:
     """Refine parameters on a single client."""
     fit_res = client.fit(ins, timeout=timeout)
+    params_size = get_size_obj(fit_res.parameters)
+    fit_res.metrics['size_recieved'] = params_size
+    # recieve compressed weights, 
+    # log(INFO, f" %%%% MAK : client id : {client.cid} : recieved {params_size}other : {fit_res.metrics}")
+    if fit_res.metrics['compressed']:
+         # decompress them 
+        model = tf.keras.models.load_model('/home/nclab/MAK/FLNCLAB/sparse_idea_output/resnet-18_model')
+        # log(INFO, f" %%%% MAK : Models loaded type : {type(fit_res.parameters)}")
+        weights = desparsify(original_model=model,sparse_weights=fit_res.parameters)
+        # log(INFO, f"MAK : after desparsify type : {type(weights) } size : {get_size_obj(weights)}")
+        # convert to typing.parameters type
+        fit_res.parameters = ndarrays_to_parameters(weights)
+        # log(INFO, f" /????? MAK : fit_res type : {type(fit_res.parameters) }status  :{fit_res.status} other : {fit_res.metrics}")
+        return client, fit_res
     return client, fit_res
 
 

@@ -12,6 +12,7 @@ from flwr.common.logger import log
 from datetime import date
 
 from mak.hpo import es,reduce_lr, CSVLoggerWithLr
+from mak.utils import sparsify, desparsify, get_size_obj
 
 class FlwrClient(fl.client.NumPyClient):
     """Flower NumPy Client implementing Fashion-MNIST image classification."""
@@ -26,6 +27,8 @@ class FlwrClient(fl.client.NumPyClient):
         client_name: string,
         file_path = None,
         save_train_res = False,
+        enable_compression = False,
+        compression_threshold = 0.055
     ):
         tf.config.run_functions_eagerly(True)
         now = datetime.now()
@@ -42,16 +45,28 @@ class FlwrClient(fl.client.NumPyClient):
         self.file_path = file_path
         self.save_train_res = save_train_res
         self.callbacks = []
+        self.compression_threshold = compression_threshold
+        self.enable_compression = enable_compression
 
     def get_parameters(self,config):
         return self.model.get_weights()
 
     def fit(self, parameters, config):
-        self.model.set_weights(parameters)
-        r = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, validation_split=0.15, 
-                           verbose=0,callbacks=self.get_callbacks(int(config['round'])))
-        hist = r.history
-        return self.model.get_weights(), len(self.x_train), {}
+        if self.enable_compression and self.compression_threshold > 0.0:
+            self.model.set_weights(parameters)
+            r = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, validation_split=0.15, 
+                            verbose=0,callbacks=self.get_callbacks(int(config['round'])))
+            hist = r.history
+            compressed_weights = sparsify(model=self.model,threshold=self.compression_threshold)
+            # print(f"client fit : compression : {self.enable_compression} client name : {self.client_name} original size : {get_size_obj(self.model.get_weights()) } parameters size : {get_size_obj(parameters)} compressed size : {get_size_obj(compressed_weights)}")
+            return compressed_weights, len(self.x_train), {"compressed" : True, "original_size": get_size_obj(parameters), "size_sent": get_size_obj(compressed_weights)}
+        else:
+            self.model.set_weights(parameters)
+            print("==================== no compression")
+            r = self.model.fit(self.x_train, self.y_train, epochs=self.epochs, validation_split=0.15, 
+                            verbose=0,callbacks=self.get_callbacks(int(config['round'])))
+            # hist = r.history
+            return self.model.get_weights(), len(self.x_train), {"compressed" : False, "original_size": get_size_obj(parameters), "size_sent": get_size_obj(parameters)}
 
     def evaluate(self, parameters, config):
         self.model.set_weights(parameters)

@@ -10,6 +10,7 @@ import flwr as fl
 from flwr.simulation.ray_transport.utils import enable_tf_gpu_growth
 from client import generate_client
 from mak.custom_server import ServerSaveData
+from mak.utils import get_size_obj
 
 
 def main() -> None:
@@ -48,11 +49,18 @@ def main() -> None:
     out_file_path = gen_dir_outfile_server(config=config)
 
     model = create_model(config['model'],input_shape=input_shape,num_classes=num_classes)
+   
     # Compile model
     compile_model(model,config['optimizer'],config['lr'])
-    strategy = get_strategy(config=config,get_eval_fn=get_eval_fn,model=model,dataset=dataset,num_clients=num_clients,on_fit_config_fn=fit_config)
+    strategy = get_strategy(config=config,
+                            get_eval_fn=get_eval_fn,
+                            model=model,
+                            dataset=dataset,
+                            num_clients=num_clients,
+                            on_fit_config_fn=fit_config)
     server = ServerSaveData(
-        strategy=strategy, client_manager=fl.server.client_manager.SimpleClientManager(),out_file_path=out_file_path,target_acc=config['target_acc'])
+        strategy=strategy, client_manager=fl.server.client_manager.SimpleClientManager(),
+        out_file_path=out_file_path,target_acc=config['target_acc'])
    
     hist = fl.simulation.start_simulation(
         client_fn=generate_client,
