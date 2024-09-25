@@ -60,10 +60,10 @@ autoclass_content = 'both'
 templates_path = ['_templates']
 
 # configuration for 'autoapi.extension'
-autoapi_type = 'python'
+# autoapi_type = 'python'
 # autoapi_dirs = ['../../fedlab']
-autoapi_template_dir = '_autoapi_templates'
-add_module_names = False  # makes Sphinx render package.module.Class as Class
+# autoapi_template_dir = '_autoapi_templates'
+# add_module_names = False  # makes Sphinx render package.module.Class as Class
 
 # Add more mapping for 'sphinx.ext.intersphinx'
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
@@ -88,10 +88,10 @@ pygments_style = 'sphinx'
 todo_include_todos = True
 
 # multi-language docs
-language = 'en'
-locale_dirs = ['../locales/']  # path is example but recommended.
-gettext_compact = False  # optional.
-gettext_uuid = True  # optional.
+# language = 'en'
+# locale_dirs = ['../locales/']  # path is example but recommended.
+# gettext_compact = False  # optional.
+# gettext_uuid = True  # optional.
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -100,7 +100,7 @@ gettext_uuid = True  # optional.
 #
 # html_theme = 'alabaster'
 html_theme = "furo"
-html_favicon = "../imgs/favicon.png"
+# html_favicon = "../imgs/favicon.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
