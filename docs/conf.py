@@ -36,15 +36,15 @@ author = 'SMILE Lab'
 # ones.
 extensions = [
     # 'autoapi.extension',  # this one is really important
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
-    'sphinxcontrib.napoleon',
-    'sphinx.ext.autosectionlabel',  # allows referring sections its title, affects `ref`
-    'sphinx_design',
-    'sphinxcontrib.bibtex',
+    # 'sphinx.ext.viewcode',
+    # 'sphinx.ext.githubpages',
+    # 'sphinx.ext.mathjax',
+    # 'sphinx.ext.intersphinx',
+    # 'sphinx.ext.todo',
+    # 'sphinxcontrib.napoleon',
+    # 'sphinx.ext.autosectionlabel',  # allows referring sections its title, affects `ref`
+    # 'sphinx_design',
+    # 'sphinxcontrib.bibtex',
     # 'sphinx.ext.imgconverter',  # for svg image to pdf
     # 'sphinxcontrib.inkscapeconverter',
 ]
