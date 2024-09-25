@@ -35,7 +35,7 @@ author = 'SMILE Lab'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'autoapi.extension',  # this one is really important
+    # 'autoapi.extension',  # this one is really important
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.mathjax',
