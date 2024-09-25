@@ -99,7 +99,7 @@ todo_include_todos = True
 # a list of builtin themes.
 #
 # html_theme = 'alabaster'
-html_theme = "furo"
+# html_theme = "furo"
 # html_favicon = "../imgs/favicon.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
